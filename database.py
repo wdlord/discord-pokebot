@@ -1,7 +1,9 @@
+import pymongo.typings
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import discord
+from typing import Optional
 from creds import MONGO_USER, MONGO_PASSWORD
 
 
@@ -28,6 +30,18 @@ class PokemonDatabase:
             }},
             upsert=True
         )
+
+    def get_pokemon_data(self, user: discord.User, pokemon: str) -> dict:
+        """
+        Gets the saved data for a user's particular Pokémon.
+
+        :param user: The discord user that we are searching for a Pokémon.
+        :param pokemon: The name of the Pokémon to search.
+        :return:
+        """
+
+        user_obj = self.db.find_one({'_id': user.id})
+        return user_obj.get(pokemon, {'normal': 0, 'shiny': 0})
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
