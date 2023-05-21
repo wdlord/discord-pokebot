@@ -3,9 +3,13 @@
 import discord
 from discord.ext import commands
 from pokeapi import get_pokemon, type_to_color
+from database import POKEMON_DB
 
 
 class PokerollCard(discord.ui.View):
+    """
+    This is the view for a card (including Next button) in the pokéroll.
+    """
 
     def __init__(self, remaining_rolls):
         super().__init__()
@@ -14,7 +18,7 @@ class PokerollCard(discord.ui.View):
     @discord.ui.button(label='Next', style=discord.ButtonStyle.green)
     async def card_view(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
-        Defines the interaction when the Next button is clicked during pokeroll.
+        Defines the interaction when the Next button is clicked during pokéroll.
         """
 
         await new_card(interaction, self.remaining_rolls)
@@ -29,8 +33,11 @@ async def new_card(interaction: discord.Interaction, remaining_rolls: int):
 
     # Fetches a random Pokémon from the pokeapi.
     pokemon = get_pokemon()
-    type_color = type_to_color[pokemon['types'][0]['type']['name']]
 
+    # TODO: determine if Pokémon is shiny.
+
+    # Gathers/formats some data to include in the embed.
+    type_color = type_to_color[pokemon['types'][0]['type']['name']]
     desc = (
         f"Types: {', '.join(t['type']['name'] for t in pokemon['types'])}"
     )
@@ -38,19 +45,22 @@ async def new_card(interaction: discord.Interaction, remaining_rolls: int):
     embed = discord.Embed(description=desc, color=type_color, title=f"{pokemon['name'].title()}")
     embed.set_image(url=pokemon['sprites']['front_default'])
 
-    # If the user still has more cards to open, we have to recursively create another card.
+    # Add the Pokémon to the user's Pokédex.
+    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=False)
+
+    # If the user still has more cards to open, we recursively create another card.
     if remaining_rolls > 0:
         view = PokerollCard(remaining_rolls - 1)
         await interaction.response.send_message(embed=embed, view=view)
 
-    # Else we only have to send this card.
+    # Else we only have to send this card without a 'Next' button.
     else:
         await interaction.response.send_message(embed=embed)
 
 
 class PokerollCommands(commands.Cog):
     """
-    Contains commands that are used to participate in the pokeroll.
+    Contains commands that are used to participate in the pokéroll.
     """
 
     def __init__(self, bot):
