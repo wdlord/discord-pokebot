@@ -90,6 +90,19 @@ class TestInputs(unittest.TestCase):
 
         self.assertEqual(pokemon['name'], 'pikachu')
 
+    def test_specific(self):
+
+        import json
+
+        name = input('type name or press enter to skip...')
+
+        if name:
+            name = name.strip().lower()
+            pokemon = get_pokemon(name)
+            print(json.dumps(pokemon, indent=4))
+
+            self.assertEqual(pokemon['name'], name)
+
 
 if __name__ == "__main__":
     unittest.main()
