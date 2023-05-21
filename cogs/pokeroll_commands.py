@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from pokeapi import get_pokemon, type_to_color
 from database import POKEMON_DB
+import random
 
 
 class PokerollCard(discord.ui.View):
@@ -34,19 +35,21 @@ async def new_card(interaction: discord.Interaction, remaining_rolls: int):
     # Fetches a random Pokémon from the pokeapi.
     pokemon = get_pokemon()
 
-    # TODO: determine if Pokémon is shiny.
+    # Determine if Pokémon is shiny.
+    is_shiny = random.random() < 0.01
 
     # Gathers/formats some data to include in the embed.
     type_color = type_to_color[pokemon['types'][0]['type']['name']]
     desc = (
         f"Types: {', '.join(t['type']['name'] for t in pokemon['types'])}"
     )
+    desc += "\n✨Shiny✨" if is_shiny else ""
 
     embed = discord.Embed(description=desc, color=type_color, title=f"{pokemon['name'].title()}")
-    embed.set_image(url=pokemon['sprites']['front_default'])
+    embed.set_image(url=pokemon['sprites']['front_shiny' if is_shiny else 'front_default'])
 
     # Add the Pokémon to the user's Pokédex.
-    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=False)
+    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=is_shiny)
 
     # If the user still has more cards to open, we recursively create another card.
     if remaining_rolls > 0:
