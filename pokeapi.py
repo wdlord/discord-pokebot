@@ -85,6 +85,26 @@ type_to_emoji = {
     'fairy': '<:FairyType:1110382685576233053>',
 }
 
+type_to_icon = {
+    'normal': '<:NormalIcon:1110400039504855210>',
+    'fire': '<:FireIcon:1110399898907586580>',
+    'water': '<:WaterIcon:1110400249438146580>',
+    'grass': '<:GrassIcon:1110399946194169947>',
+    'electric': '<:ElectricIcon:1110399845233078273>',
+    'ice': '<:IceIcon:1110400013693100103>',
+    'fighting': '<:FightingIcon:1110399878334513192>',
+    'poison': '<:PoisonIcon:1110400066184814612>',
+    'ground': '<:GroundIcon:1110399965924163644>',
+    'flying': '<:FlyingIcon:1110399913776402432>',
+    'psychic': '<:PsychicIcon:1110400125118992404>',
+    'bug': '<:BugIcon:1110389849606856704>',
+    'rock': '<:RockIcon:1110400147420086373>',
+    'ghost': '<:GhostIcon:1110399930306150433>',
+    'dark': '<:DarkIcon:1110399801092231241>',
+    'steel': '<:SteelIcon:1110400209499992165>',
+    'fairy': '<:FairyIcon:1110399862421323806>'
+}
+
 
 class TestInputs(unittest.TestCase):
     """
