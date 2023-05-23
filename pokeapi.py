@@ -64,6 +64,27 @@ type_to_color = {
     'fairy': 0xD685AD,
 }
 
+type_to_emoji = {
+    'normal': '<:NormalType:1110384310193770567>',
+    'fire': '<:FireType:1110384162931748904>',
+    'water': '<:WaterType:1110384384583925761>',
+    'grass': '<:GrassType:1110384261065875466>',
+    'electric': '<:ElectricType:1110382671579856949>',
+    'ice': '<:IceType:1110384294523846747>',
+    'fighting': '<:FightingType:1110384120632201236>',
+    'poison': '<:PoisonType:1110384325473603715>',
+    'ground': '<:GroundType:1110384277264269342>',
+    'flying': '<:FlyingType:1110384222599905321>',
+    'psychic': '<:PsychicType:1110384340564705290>',
+    'bug': '<:BugType:1110381627156205618>',
+    'rock': '<:RockType:1110384356385640589>',
+    'ghost': '<:GhostType:1110384244028612611>',
+    'dark': '<:DarkType:1110382634577707050>',
+    'dragon': '<:DragonType:1110382656761364500>',
+    'steel': '<:SteelType:1110384371166363678>',
+    'fairy': '<:FairyType:1110382685576233053>',
+}
+
 
 class TestInputs(unittest.TestCase):
     """
