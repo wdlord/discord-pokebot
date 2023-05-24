@@ -36,6 +36,11 @@ class EncounterView(discord.ui.View):
 
 
 async def make_file(pokemon: dict, is_shiny: bool) -> discord.File:
+    """
+    Makes a discord.File using the Pokémon's image sprite.
+    When trying to send an image hosted elsewhere directly through discord (not through an embed),
+    The file must be asynchronously retrieved and turned into a discord.File object.
+    """
 
     import io
     import aiohttp
@@ -45,6 +50,8 @@ async def make_file(pokemon: dict, is_shiny: bool) -> discord.File:
     if sprite_url:
         extension = "gif"
 
+    # The sprite URL may be None, indicating that there is not an animated sprite for this Pokémon.
+    # In this case we switch to the default static image sprite.
     else:
         sprite_url = pokemon['sprites']['front_shiny' if is_shiny else 'front_default']
         extension = "png"
@@ -84,15 +91,41 @@ class Encounters(commands.Cog):
         print(f"{__name__} is connected!")
         await self.load()
 
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """
+        Has a small chance to trigger a random Pokémon encounter.
+        In an encounter, a random Pokémon appears, and the user can click a button to capture it.
+        """
+
+        if message.author.id != self.bot.user.id and random.random() < 0.005:
+
+            pokemon = get_pokemon()
+            is_shiny = random.random() < 0.01
+
+            alert = f"A wild **{pokemon['name'].title()}** appeared!"
+
+            pokemon_sprite = await make_file(pokemon, is_shiny)
+            grass_sprite = discord.File("./grass_small.png")
+
+            # The code that handles claiming the Pokémon when the button is clicked is in this class.
+            view = EncounterView(pokemon, is_shiny)
+
+            # The encounter is sent in two separate messages:
+            # The first is the alert and animated Pokémon sprite.
+            # The second is the grass sprite with the 'Catch' button view attached.
+            await message.channel.send(alert, file=pokemon_sprite)
+            await message.channel.send(file=grass_sprite, view=view)
+
     @discord.app_commands.command()
     async def en(self, interaction: discord.Interaction):
         """
         Test command to trigger an encounter.
+        In an encounter, a random Pokémon appears, and the user can click a button to capture it.
         """
 
         pokemon = get_pokemon()
 
-        # Determine if Pokémon is shiny.
         is_shiny = random.random() < 0.01
 
         message = f"A wild **{pokemon['name'].title()}** appeared!"
@@ -102,6 +135,9 @@ class Encounters(commands.Cog):
 
         view = EncounterView(pokemon, is_shiny)
 
+        # The encounter is sent in two separate messages:
+        # The first is the animated Pokémon sprite.
+        # The second is the grass sprite with the 'Catch' button.
         await interaction.response.send_message(message, file=pokemon_sprite)
         await interaction.channel.send(file=grass_sprite, view=view)
 

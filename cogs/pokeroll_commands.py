@@ -2,7 +2,7 @@
 
 import discord
 from discord.ext import commands
-from pokeapi import get_pokemon, type_to_color
+from pokeapi import get_pokemon, type_to_color, type_to_icon
 from database import POKEMON_DB
 import random
 
@@ -46,7 +46,7 @@ class PokemonSearchCard(discord.ui.View):
         # Gathers/formats some data to include in the embed.
         type_color = type_to_color[self.pokemon['types'][0]['type']['name']]
         desc = (
-            f"Types: {', '.join(t['type']['name'] for t in self.pokemon['types'])}"
+            f"{''.join(type_to_icon[t['type']['name']] for t in self.pokemon['types'])}"
             f"\nNormals Owned: {self.pokemon_data['normal']}"
             f"\nShinies Owned: {self.pokemon_data['shiny']}"
         )
@@ -102,7 +102,7 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
     # Gathers/formats some data to include in the embed.
     type_color = type_to_color[pokemon['types'][0]['type']['name']]
     desc = (
-        f"Types: {', '.join(t['type']['name'] for t in pokemon['types'])}"
+        f"{''.join(type_to_icon[t['type']['name']] for t in pokemon['types'])}"
     )
     desc += "\n✨Shiny✨" if is_shiny else ""
 
