@@ -71,4 +71,5 @@ async def main():
 
 
 # Start the bot loop.
+discord.utils.setup_logging()
 asyncio.run(main())
