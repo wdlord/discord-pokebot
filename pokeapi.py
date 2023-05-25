@@ -101,6 +101,7 @@ type_to_icon = {
     'rock': '<:RockIcon:1110400147420086373>',
     'ghost': '<:GhostIcon:1110399930306150433>',
     'dark': '<:DarkIcon:1110399801092231241>',
+    'dragon': '<:DragonIcon:1110399818590855250>',
     'steel': '<:SteelIcon:1110400209499992165>',
     'fairy': '<:FairyIcon:1110399862421323806>'
 }

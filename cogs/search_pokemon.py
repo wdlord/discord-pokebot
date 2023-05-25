@@ -4,26 +4,6 @@ import discord
 from discord.ext import commands
 from pokeapi import get_pokemon, type_to_color, type_to_icon
 from database import POKEMON_DB
-import random
-
-
-class PokerollCard(discord.ui.View):
-    """
-    This is the view for a card (including Next button) in the pokéroll.
-    """
-
-    def __init__(self, remaining_rolls):
-        super().__init__()
-        self.remaining_rolls = remaining_rolls
-
-    @discord.ui.button(label='Next', style=discord.ButtonStyle.green)
-    async def card_view(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """
-        Defines the interaction when the Next button is clicked during pokéroll.
-        """
-
-        await roll_pokemon(interaction, self.remaining_rolls)
-        self.stop()
 
 
 class PokemonSearchCard(discord.ui.View):
@@ -87,52 +67,9 @@ class PokemonSearchCard(discord.ui.View):
         await interaction.response.defer()
 
 
-async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
+class SearchPokemon(commands.Cog):
     """
-    Generates new cards until the user is out of rolls.
-    The interaction arg is either the interaction from the initial command, or from the Next buttons.
-    """
-
-    # Fetches a random Pokémon from the pokeapi.
-    pokemon = get_pokemon()
-
-    # Determine if Pokémon is shiny.
-    is_shiny = random.random() < 0.01
-
-    # Gathers/formats some data to include in the embed.
-    type_color = type_to_color[pokemon['types'][0]['type']['name']]
-    desc = (
-        f"{''.join(type_to_icon[t['type']['name']] for t in pokemon['types'])}"
-    )
-    desc += "\n✨Shiny✨" if is_shiny else ""
-
-    embed = discord.Embed(description=desc, color=type_color, title=f"{pokemon['name'].title()}")
-
-    # Try to use an animated version of the sprite, but one may not exist.
-    sprite_url = (
-            pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if is_shiny else 'front_default']
-            or
-            pokemon['sprites']['front_shiny' if is_shiny else 'front_default']
-    )
-
-    embed.set_image(url=sprite_url)
-
-    # Add the Pokémon to the user's Pokédex.
-    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=is_shiny)
-
-    # If the user still has more cards to open, we recursively create another card.
-    if remaining_rolls > 0:
-        view = PokerollCard(remaining_rolls - 1)
-        await interaction.response.send_message(embed=embed, view=view)
-
-    # Else we only have to send this card without a 'Next' button.
-    else:
-        await interaction.response.send_message(embed=embed)
-
-
-class PokerollCommands(commands.Cog):
-    """
-    Contains commands that are used to participate in the pokéroll.
+    Functionality for searching Pokémon.
     """
 
     def __init__(self, bot):
@@ -154,15 +91,6 @@ class PokerollCommands(commands.Cog):
 
         print(f"{__name__} is connected!")
         await self.load()
-
-    @discord.app_commands.command()
-    async def roll(self, interaction: discord.Interaction):
-        """
-        Roll a set of Pokémon to add to your Pokédex.
-        """
-
-        # rolls one Pokémon at a time, click the next button to continue.
-        await roll_pokemon(interaction, 2)
 
     @discord.app_commands.command()
     async def search(self, interaction: discord.Interaction, name: str):
@@ -190,6 +118,6 @@ async def setup(bot):
     """
 
     if bot.testing:
-        await bot.add_cog(PokerollCommands(bot), guilds=[discord.Object(id=864728010132947015)])
+        await bot.add_cog(SearchPokemon(bot), guilds=[discord.Object(id=864728010132947015)])
     else:
-        await bot.add_cog(PokerollCommands(bot))
+        await bot.add_cog(SearchPokemon(bot))
