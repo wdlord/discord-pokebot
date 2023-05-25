@@ -2,8 +2,9 @@
 
 import discord
 from discord.ext import commands
-from pokeapi import get_pokemon, type_to_color, type_to_icon
+from pokeapi import get_pokemon
 from database import POKEMON_DB
+import constants
 
 
 class PokemonSearchCard(discord.ui.View):
@@ -23,16 +24,22 @@ class PokemonSearchCard(discord.ui.View):
         Generates an embed object showing a Pokémon and the user's stats for that Pokémon.
         """
 
-        # Gathers/formats some data to include in the embed.
-        type_color = type_to_color[self.pokemon['types'][0]['type']['name']]
+        # Get the color corresponding to the first type of this Pokémon to use as the embed color.
+        first_type_name = self.pokemon['types'][0]['type']['name']
+        type_color = constants.TYPE_TO_COLOR[first_type_name]
+
+        # Set the embed description.
+        # Here we add custom discord emotes corresponding to the Pokémon's types.
+        # We also show whether the user has any of this Pokémon.
         desc = (
-            f"{''.join(type_to_icon[t['type']['name']] for t in self.pokemon['types'])}"
+            f"{''.join(constants.TYPE_TO_ICON[t['type']['name']] for t in self.pokemon['types'])}"
             f"\nNormals Owned: {self.pokemon_data['normal']}"
             f"\nShinies Owned: {self.pokemon_data['shiny']}"
         )
+
         embed = discord.Embed(description=desc, color=type_color, title=f"{self.pokemon['name'].title()}")
 
-        # Try to use an animated version of the sprite, but one may not exist.
+        # Try to use an animated version of the sprite, but if it doesn't exist we just use the static version.
         sprite_url = (
                 self.pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if self.is_shiny else 'front_default']
                 or

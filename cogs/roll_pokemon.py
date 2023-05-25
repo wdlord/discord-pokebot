@@ -2,8 +2,9 @@
 
 import discord
 from discord.ext import commands, tasks
-from pokeapi import get_pokemon, type_to_color, type_to_icon
+from pokeapi import get_pokemon
 from database import POKEMON_DB
+import constants
 import random
 import datetime
 
@@ -20,7 +21,7 @@ class PokemonRollCard(discord.ui.View):
     @discord.ui.button(label='Next', style=discord.ButtonStyle.green)
     async def card_view(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
-        Defines the interaction when the Next button is clicked during pokéroll.
+        Defines the interaction when the Next button is clicked when rolling Pokémon.
         """
 
         await roll_pokemon(interaction, self.remaining_rolls)
@@ -29,26 +30,29 @@ class PokemonRollCard(discord.ui.View):
 
 async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
     """
-    Generates new cards until the user is out of rolls.
-    The interaction arg is either the interaction from the initial command, or from the Next buttons.
+    Recursively generates new cards until the user is out of rolls.
+
+    :param interaction: Either the interaction from the command, or from the 'Next' button.
+    :param remaining_rolls: How many more rolls the user has available.
+    This is used to avoid accessing the database unnecessarily.
     """
 
-    # Fetches a random Pokémon from the pokeapi.
     pokemon = get_pokemon()
+    is_shiny = random.random() < constants.SHINY_CHANCE
 
-    # Determine if Pokémon is shiny.
-    is_shiny = random.random() < 0.01
+    # Get the color corresponding to the first type of this Pokémon to use as the embed color.
+    first_type_name = pokemon['types'][0]['type']['name']
+    type_color = constants.TYPE_TO_COLOR[first_type_name]
 
-    # Gathers/formats some data to include in the embed.
-    type_color = type_to_color[pokemon['types'][0]['type']['name']]
-    desc = (
-        f"{''.join(type_to_icon[t['type']['name']] for t in pokemon['types'])}"
-    )
+    # Set the embed description.
+    # Here we add custom discord emotes corresponding to the Pokémon's types.
+    # We also add an extra indicator only if the Pokémon is shiny.
+    desc = f"{''.join(constants.TYPE_TO_ICON[t['type']['name']] for t in pokemon['types'])}"
     desc += "\n✨Shiny✨" if is_shiny else ""
 
     embed = discord.Embed(description=desc, color=type_color, title=f"{pokemon['name'].title()}")
 
-    # Try to use an animated version of the sprite, but one may not exist.
+    # Try to use an animated version of the sprite, but if it doesn't exist we just use the static version.
     sprite_url = (
             pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if is_shiny else 'front_default']
             or
@@ -60,7 +64,7 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
     # Add the Pokémon to the user's Pokédex.
     POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=is_shiny)
 
-    # Adjust the remaining rolls.
+    # Adjust the user's remaining rolls.
     POKEMON_DB.use_roll(interaction.user)
     remaining_rolls -= 1
 
@@ -76,17 +80,18 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
 
 def get_reset_time() -> str:
     """
-    Calculates how long until the rolls reset.
-    Returned as a simple string such as: "23 hours and 3 minutes."
+    Calculates how long until the rolls reset (aka how long until midnight UTC).
+    Returned as a string such as "23 hours and 3 minutes".
     """
 
     now = datetime.datetime.now(datetime.timezone.utc)
     tomorrow = now + datetime.timedelta(days=1)
     reset_time = datetime.datetime.combine(tomorrow, datetime.time.min, datetime.timezone.utc) - now
+
     return f" {reset_time.seconds // 3600} hours and {(reset_time.seconds // 60) % 60} minutes"
 
 
-class PokerollCommands(commands.Cog):
+class RollPokemon(commands.Cog):
     """
     Contains commands that are used to participate in the pokéroll.
     """
@@ -123,25 +128,17 @@ class PokerollCommands(commands.Cog):
     async def roll(self, interaction: discord.Interaction):
         """
         Roll a set of Pokémon to add to your Pokédex.
+        Rolls one Pokémon at a time, click the next button to continue.
         """
+
         remaining_rolls = POKEMON_DB.get_remaining_rolls(interaction.user)
 
-        # rolls one Pokémon at a time, click the next button to continue.
         if remaining_rolls > 0:
             await roll_pokemon(interaction, remaining_rolls)
 
         else:
             message = f"You've used all your rolls. Rolls reset in **{get_reset_time()}**."
             await interaction.response.send_message(message, ephemeral=True)
-
-    @discord.app_commands.command()
-    async def reset(self, interaction: discord.Interaction):
-        """
-        Test command to reset all the rolls.
-        """
-
-        await self.reset_rolls()
-        await interaction.response.send_message("Reset :)", ephemeral=True)
 
 
 async def setup(bot):
@@ -150,6 +147,6 @@ async def setup(bot):
     """
 
     if bot.testing:
-        await bot.add_cog(PokerollCommands(bot), guilds=[discord.Object(id=864728010132947015)])
+        await bot.add_cog(RollPokemon(bot), guilds=[discord.Object(id=864728010132947015)])
     else:
-        await bot.add_cog(PokerollCommands(bot))
+        await bot.add_cog(RollPokemon(bot))
