@@ -50,6 +50,14 @@ class PokemonDatabase:
 
         self.db.update_many({}, {'$set': {'remaining_rolls': 3}})
 
+    def reset_user_rolls(self, user: discord.User):
+        """
+        Resets the rolls for a particular user.
+        Intended for use in testing_commands.py.
+        """
+
+        self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': 3}})
+
     def use_roll(self, user: discord.User):
         """
         Subtracts a roll from a given user.

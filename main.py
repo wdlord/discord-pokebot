@@ -63,7 +63,7 @@ async def main():
 
     # Load all the files in the /cogs folder as Cog extensions.
     for filename in os.listdir('./cogs'):
-        if filename.endswith('.py'):
+        if filename.endswith('.py') and '__' not in filename:
             await bot.load_extension(f'cogs.{filename[:-3]}')
 
     print('------')

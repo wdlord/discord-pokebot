@@ -134,15 +134,6 @@ class PokerollCommands(commands.Cog):
             message = f"You've used all your rolls. Rolls reset in **{get_reset_time()}**."
             await interaction.response.send_message(message, ephemeral=True)
 
-    @discord.app_commands.command()
-    async def reset(self, interaction: discord.Interaction):
-        """
-        Test command to reset all the rolls.
-        """
-
-        await self.reset_rolls()
-        await interaction.response.send_message("Reset :)", ephemeral=True)
-
 
 async def setup(bot):
     """
