@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands
+import constants
 from pokeapi import get_pokemon
 import random
 from database import POKEMON_DB
@@ -21,10 +22,10 @@ class EncounterView(discord.ui.View):
     @discord.ui.button(label='Catch', style=discord.ButtonStyle.green)
     async def catch(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
-        Defines the interaction when the Next button is clicked during pokéroll.
+        Defines the interaction when the Next button is clicked when rolling Pokémon.
         """
 
-        # Users can only claim this Pokémon once.
+        # Each user can only claim once during this encounter.
         if interaction.user.id in self.claimed_by:
             await interaction.response.send_message("You've already claimed this Pokémon.", ephemeral=True)
 
@@ -37,9 +38,9 @@ class EncounterView(discord.ui.View):
 
 async def make_file(pokemon: dict, is_shiny: bool) -> discord.File:
     """
-    Makes a discord.File using the Pokémon's image sprite.
-    When trying to send an image hosted elsewhere directly through discord (not through an embed),
-    The file must be asynchronously retrieved and turned into a discord.File object.
+    Makes a discord.File object for a Pokémon's image sprite.
+    Externally hosted images must be downloaded to a discord.File object to be sent directly to a channel.
+    https://discordpy.readthedocs.io/en/stable/faq.html#how-do-i-upload-an-image
     """
 
     import io
@@ -59,7 +60,7 @@ async def make_file(pokemon: dict, is_shiny: bool) -> discord.File:
     async with aiohttp.ClientSession() as session:
         async with session.get(sprite_url) as resp:
             if resp.status != 200:
-                print('Could not download file...')
+                print("Could not download file...")
 
             else:
                 data = io.BytesIO(await resp.read())
@@ -76,7 +77,7 @@ async def run_encounter(channel: discord.TextChannel):
     """
 
     pokemon = get_pokemon()
-    is_shiny = random.random() < 0.01
+    is_shiny = random.random() < constants.SHINY_CHANCE
 
     alert = f"A wild **{pokemon['name'].title()}** appeared!"
 
@@ -126,7 +127,7 @@ class Encounters(commands.Cog):
         """
 
         # This first keeps the bot from triggering an encounter before running the random function.
-        if message.author.id != self.bot.user.id and random.random() < 0.005:
+        if message.author.id != self.bot.user.id and random.random() < constants.ENCOUNTER_CHANCE:
             await run_encounter(message.channel)
 
 

@@ -44,7 +44,7 @@ class TestingCommands(commands.Cog):
     @discord.app_commands.command()
     async def reset(self, interaction: discord.Interaction):
         """
-        Test command to reset all the rolls.
+        Test command to reset a user's rolls.
         """
 
         POKEMON_DB.reset_user_rolls(interaction.user)
@@ -56,5 +56,5 @@ async def setup(bot):
     Triggered when we load this class as an extension of the bot in main.py.
     """
 
-    # This class only syncs its commands to the specified guild.
+    # This cog should only sync its commands to the testing server.
     await bot.add_cog(TestingCommands(bot), guilds=[discord.Object(id=864728010132947015)])

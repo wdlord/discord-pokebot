@@ -1,9 +1,10 @@
-import pymongo.typings
+# Code by https://github.com/wdlord
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import discord
 from creds import MONGO_USER, MONGO_PASSWORD
+import constants
 
 
 class PokemonDatabase:
@@ -48,7 +49,7 @@ class PokemonDatabase:
         Resets the remaining rolls for all users.
         """
 
-        self.db.update_many({}, {'$set': {'remaining_rolls': 3}})
+        self.db.update_many({}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}})
 
     def reset_user_rolls(self, user: discord.User):
         """
@@ -56,7 +57,7 @@ class PokemonDatabase:
         Intended for use in testing_commands.py.
         """
 
-        self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': 3}})
+        self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}})
 
     def use_roll(self, user: discord.User):
         """
@@ -78,8 +79,8 @@ class PokemonDatabase:
 
         # Creates remaining_rolls field if necessary.
         except TypeError:
-            self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': 3}}, upsert=True)
-            return 3
+            self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}}, upsert=True)
+            return constants.MAX_ROLLS
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
