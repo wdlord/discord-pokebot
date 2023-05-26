@@ -70,7 +70,10 @@ class PokemonSearchCard(discord.ui.View):
         self.is_shiny = not self.is_shiny
         button.label = 'View Normal' if self.is_shiny else 'View Shiny'
 
+        # Remake the embed with the alternate sprite, and update the message.
         await self.message.edit(embed=self.make_card(), view=self)
+
+        # We must acknowledge the interaction in some way.
         await interaction.response.defer()
 
 
