@@ -44,6 +44,14 @@ class PokemonDatabase:
         pokemon_list = user_obj['pokemon']
         return pokemon_list.get(f'{pokemon}', {'normal': 0, 'shiny': 0})
 
+    def get_all_pokemon(self, user: discord.User) -> dict:
+        """
+        Gets a dict of a user's captured Pokémon.
+        """
+
+        user_obj = self.db.find_one({'_id': user.id})
+        return user_obj['pokemon'] if user_obj else None
+
     def reset_all_rolls(self):
         """
         Resets the remaining rolls for all users.
@@ -81,6 +89,55 @@ class PokemonDatabase:
         except TypeError:
             self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}}, upsert=True)
             return constants.MAX_ROLLS
+
+    def set_favorite(self, user: discord.User, pokemon: str, is_shiny: bool):
+        """
+        Sets the user's favorite Pokémon for their Pokédex.
+        """
+
+        self.db.update_one(
+            {'_id': user.id},
+            {'$set': {
+                'favorite': {
+                    'name': pokemon,
+                    'is_shiny': is_shiny
+                }
+            }},
+            upsert=True
+        )
+
+    def get_favorite(self, user: discord.User):
+        """
+        Gets the user's favorite Pokémon for their Pokédex.
+        """
+        user_obj = self.db.find_one({'_id': user.id})
+
+        try:
+            favorite = user_obj['favorite']
+            return favorite
+
+        # Creates user if necessary.
+        except (TypeError, KeyError) as error:
+
+            # This would mean that the user has not been added to the database yet.
+            if type(error) is TypeError:
+                return None
+
+            # If the user has not set a favorite, we will set their favorite as their first Pokémon.
+            if type(error) is KeyError:
+                first_pokemon = list(user_obj['pokemon'].keys())[0]
+
+                favorite = {
+                    'name': first_pokemon,
+                    'is_shiny': (user_obj['pokemon'][first_pokemon]['normal'] == 0)
+                }
+
+                self.db.update_one({'_id': user.id}, {'$set': {'favorite': favorite}}, upsert=True)
+
+                return favorite
+
+
+
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
