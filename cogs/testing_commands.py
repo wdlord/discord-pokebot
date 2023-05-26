@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from cogs.encounters import run_encounter
 from database import POKEMON_DB
+from pokeapi import get_pokemon
 
 
 class TestingCommands(commands.Cog):
@@ -49,6 +50,22 @@ class TestingCommands(commands.Cog):
 
         POKEMON_DB.reset_user_rolls(interaction.user)
         await interaction.response.send_message("Your rolls have been reset.", ephemeral=True)
+
+    @discord.app_commands.command()
+    async def give(self, interaction: discord.Interaction, pokemon_name: str, is_shiny: bool):
+        """
+        Gives the user one of the specified Pokémon.
+        """
+
+        pokemon_name = pokemon_name.lower().strip()
+        pokemon = get_pokemon(pokemon_name)
+
+        if not pokemon:
+            await interaction.response.send_message("Could not find that Pokémon.", ephemeral=True)
+
+        else:
+            POKEMON_DB.add_pokemon(interaction.user, pokemon_name, is_shiny)
+            await interaction.response.send_message(f"{pokemon_name} was added to your Pokédex.", ephemeral=True)
 
 
 async def setup(bot):

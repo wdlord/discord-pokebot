@@ -158,6 +158,31 @@ class PokemonList(discord.ui.View):
         await interaction.response.defer()
 
 
+class NormalOrShiny(discord.ui.View):
+
+    def __init__(self, pokemon_name):
+        super().__init__()
+        self.pokemon_name = pokemon_name
+
+    @discord.ui.button(label='Normal', style=discord.ButtonStyle.grey)
+    async def normal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """
+        Set the normal variant of the Pokémon as the favorite.
+        """
+
+        POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, False)
+        await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+
+    @discord.ui.button(label='Shiny', style=discord.ButtonStyle.grey)
+    async def shiny(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """
+        Set the shiny variant of the Pokémon as the favorite.
+        """
+
+        POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, True)
+        await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+
+
 class Pokedex(commands.Cog):
     """
     Functionality for viewing captured Pokémon.
@@ -206,7 +231,8 @@ class Pokedex(commands.Cog):
             await interaction.response.send_message("You do not own any of that Pokémon.", ephemeral=True)
 
         elif pokemon_data['normal'] and pokemon_data['shiny']:
-            pass
+            prompt = "Would you like to set the normal or shiny Pokémon as your favorite?"
+            await interaction.response.send_message(prompt, view=NormalOrShiny(name), ephemeral=True)
 
         # if the user only owns a normal OR shiny variant, we don't need to ask them which version to set.
         elif pokemon_data['normal'] or pokemon_data['shiny']:
