@@ -110,6 +110,7 @@ class PokemonList(discord.ui.View):
         :param interaction: The interaction of the command used.
         :return:
         """
+
         embed = self.make_embed() if self.pokemon_list else self.empty_embed()
         await interaction.response.send_message(embed=embed, view=self)
         self.message = await interaction.original_response()
@@ -119,6 +120,12 @@ class PokemonList(discord.ui.View):
         """
         Show the previous page when clicked.
         """
+
+        # Special case for users that are not in the database.
+        if not self.pokemon_list:
+            button.disabled = True
+            await interaction.response.defer()
+            return
 
         # Loop around to the end if necessary.
         self.page = self.page - 1 if self.page != 0 else self.total_pages - 1
@@ -134,6 +141,12 @@ class PokemonList(discord.ui.View):
         """
         Show the next page when clicked.
         """
+
+        # Special case for users that are not in the database.
+        if not self.pokemon_list:
+            button.disabled = True
+            await interaction.response.defer()
+            return
 
         # Loop around to the beginning if necessary.
         self.page = self.page + 1 if self.page != self.total_pages - 1 else 0
