@@ -5,6 +5,7 @@ from discord.ext import commands
 from database import POKEMON_DB
 from pokeapi import get_pokemon
 import constants
+from math import ceil
 
 
 class PokemonList(discord.ui.View):
@@ -15,6 +16,8 @@ class PokemonList(discord.ui.View):
         self.message: discord.Message = None
         self.pokemon_total = 0
         self.pokemon_list = self.make_pokemon_list()
+        self.page = 0
+        self.total_pages = ceil(len(self.pokemon_list) / 10)
 
     def make_pokemon_list(self):
         """
@@ -72,11 +75,20 @@ class PokemonList(discord.ui.View):
         )
         embed.set_thumbnail(url=favorite_sprite)
 
-        value = '\n'.join(self.pokemon_list)
+        # Get the slice of the Pokédex to show.
+        lower_bound = self.page * 10
+
+        if len(self.pokemon_list) < lower_bound + 10:
+            pokedex_slice = self.pokemon_list[lower_bound:]
+
+        else:
+            pokedex_slice = self.pokemon_list[lower_bound:lower_bound + 10]
+
+        value = '\n'.join(pokedex_slice)
 
         embed.add_field(name="", value=value)
 
-        embed.set_footer(text=f"Total: {self.pokemon_total} - Page X of XX")
+        embed.set_footer(text=f"Total: {self.pokemon_total} - Page {self.page + 1} of {self.total_pages}")
 
         return embed
 
@@ -101,6 +113,36 @@ class PokemonList(discord.ui.View):
         embed = self.make_embed() if self.pokemon_list else self.empty_embed()
         await interaction.response.send_message(embed=embed, view=self)
         self.message = await interaction.original_response()
+
+    @discord.ui.button(label='◀', style=discord.ButtonStyle.grey)
+    async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """
+        Show the previous page when clicked.
+        """
+
+        # Loop around to the end if necessary.
+        self.page = self.page - 1 if self.page != 0 else self.total_pages - 1
+
+        # Remake the embed with the next group of Pokémon, and update the message.
+        await self.message.edit(embed=self.make_embed(), view=self)
+
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
+
+    @discord.ui.button(label='▶', style=discord.ButtonStyle.grey)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """
+        Show the next page when clicked.
+        """
+
+        # Loop around to the beginning if necessary.
+        self.page = self.page + 1 if self.page != self.total_pages - 1 else 0
+
+        # Remake the embed with the next group of Pokémon, and update the message.
+        await self.message.edit(embed=self.make_embed(), view=self)
+
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
 
 
 class Pokedex(commands.Cog):
