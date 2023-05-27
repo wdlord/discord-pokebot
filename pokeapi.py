@@ -4,7 +4,8 @@ import requests
 import random
 import json
 import unittest
-from typing import Optional
+from typing import Optional, List
+from dataclasses import dataclass
 
 
 # This loads a list of Pokémon names to be used with the 'random' button.
@@ -46,6 +47,29 @@ def get_pokemon(name: Optional[str] = None) -> Optional[dict]:
         return response.json()
 
 
+def get_evolution_chain(pokemon_name: str) -> dict:
+    """
+    Gets the evolution chain object for a Pokémon ID.
+
+    :param pokemon_name: The name of a  Pokémon.
+    :return: The evolution chain object from https://pokeapi.co
+    """
+
+    # The species ID != the Pokémon ID, so we must first look up the species and get the chain URL from there.
+    response1 = requests.get(f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_name}/")
+
+    if response1.status_code != 200:
+        print(f"pokeapi error (species): {response1.status_code}")
+
+    # Now we can directly query this evolution chain URL to get the correct Pokémon chain.
+    response2 = requests.get(response1.json()['evolution_chain']['url'])
+
+    if response2.status_code != 200:
+        print(f"pokeapi error (evolution_chain): {response2.status_code}")
+
+    return response2.json()
+
+
 class TestInputs(unittest.TestCase):
     """
     This class contains unit tests for the get_pokemon() function.
@@ -64,7 +88,6 @@ class TestInputs(unittest.TestCase):
         self.assertNotEqual(get_pokemon(), None)
 
     def test_show_expected_output(self):
-        import json
 
         pokemon = get_pokemon('pikachu')
         print(json.dumps(pokemon, indent=4))
@@ -72,8 +95,6 @@ class TestInputs(unittest.TestCase):
         self.assertEqual(pokemon['name'], 'pikachu')
 
     def test_specific(self):
-
-        import json
 
         name = input('type name or press enter to skip...')
 
@@ -83,6 +104,13 @@ class TestInputs(unittest.TestCase):
             print(json.dumps(pokemon, indent=4))
 
             self.assertEqual(pokemon['name'], name)
+
+    def test_evolution_chain(self):
+
+        chain = get_evolution_chain(5)
+        print(json.dumps(chain, indent=4))
+
+        self.assertNotEqual(chain, None)
 
 
 if __name__ == "__main__":

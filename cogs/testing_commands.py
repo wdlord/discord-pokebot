@@ -67,6 +67,10 @@ class TestingCommands(commands.Cog):
             POKEMON_DB.add_pokemon(interaction.user, pokemon_name, is_shiny)
             await interaction.response.send_message(f"{pokemon_name} was added to your Pokédex.", ephemeral=True)
 
+    # TODO: /berries
+
+    # TODO: /tree <pokemon> ?
+
 
 async def setup(bot):
     """
