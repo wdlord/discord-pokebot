@@ -172,6 +172,7 @@ class NormalOrShiny(discord.ui.View):
 
         POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, False)
         await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+        self.stop()
 
     @discord.ui.button(label='Shiny', style=discord.ButtonStyle.grey)
     async def shiny(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -181,6 +182,7 @@ class NormalOrShiny(discord.ui.View):
 
         POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, True)
         await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+        self.stop()
 
 
 class Pokedex(commands.Cog):
@@ -218,7 +220,7 @@ class Pokedex(commands.Cog):
         await pokedex_view.send(interaction)
 
     @discord.app_commands.command()
-    async def setfavorite(self, interaction: discord.Interaction, name: str):
+    async def favorite(self, interaction: discord.Interaction, name: str):
         """
         Set the Pokémon that appears in your Pokédex thumbnail.
         """
@@ -237,7 +239,7 @@ class Pokedex(commands.Cog):
         # if the user only owns a normal OR shiny variant, we don't need to ask them which version to set.
         elif pokemon_data['normal'] or pokemon_data['shiny']:
             POKEMON_DB.set_favorite(interaction.user, name, pokemon_data['shiny'] > 0)
-            await interaction.response.send_message(f"{name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+            await interaction.response.send_message(f"**{name.title()}** has been set as your favorite Pokémon.", ephemeral=True)
 
 
 async def setup(bot):

@@ -6,45 +6,84 @@ import constants
 from pokeapi import get_pokemon, get_evolution_chain
 import random
 from database import POKEMON_DB
-from typing import List
+from typing import List, Optional
 
 
 class EvolutionTree:
+    """
+    Represents a species' evolution tree.
+    Some Pokémon can evolve into multiple things, this structure handles that branching potential.
+    An example of a species with branching evolutions is 'Ralts' -> 'Kirlia' -> ('Gardevoir' or 'Gallade').
+    """
 
-    def __init__(self, chain_item, evolves_from):
-        self.name = chain_item['species']['name']
-        self.evolves_from = evolves_from
-        self.evolves_to = [EvolutionTree(sub_item, self) for sub_item in chain_item['evolves_to']]
+    def __init__(self, chain_link: dict):
+        """
+        Recursively constructs the evolution tree from a chain-link.
+        https://pokeapi.co/docs/v2#evolution-section
+
+        :param chain_link: A chain-link from the pokeapi 'evolution' endpoint.
+        """
+
+        self.name = chain_link['species']['name']
+        self.evolves_to = [EvolutionTree(next_link) for next_link in chain_link['evolves_to']]
 
     def __repr__(self) -> str:
-        """This defines how the class is printed."""
-        return f"Tree Item: {self.name}"
+        """
+        This defines how the class is printed.
+        Here we only print the name of the Pokémon represented by this link.
+        """
+
+        return f"TREE: {self.name}"
 
 
-def find_in_tree(chain_item: EvolutionTree, pokemon: str):
+def find_in_tree(chain_link: EvolutionTree, pokemon: str) -> Optional[EvolutionTree]:
+    """
+    Recursively finds the node representing the given Pokémon in a species evolution tree.
+
+    :param chain_link: The root of the evolution tree.
+    :param pokemon: The name of the Pokémon to find.
+    :return: The node representing the target Pokémon, or None.
+    """
 
     # Base case: return this item if it is our target Pokémon.
-    if chain_item.name == pokemon:
-        return chain_item
+    if chain_link.name == pokemon:
+        return chain_link
 
     # Else, recursively search through this Pokémon's evolutions.
-    for branch in chain_item.evolves_to:
-        next_item = find_in_tree(branch, pokemon)
-        if next_item:
-            return next_item
+    for branch in chain_link.evolves_to:
+        next_link = find_in_tree(branch, pokemon)
+        if next_link:
+            return next_link
 
-    # If it was not found in that section of the tree, return None.
+    # If it was not found in those branches, return None.
     return None
 
 
-class PickEvolution(discord.ui.View):
+def get_evolutions(pokemon: dict) -> List[EvolutionTree]:
+    """
+    Gets the next evolution(s) of this Pokémon as a list (empty if it can't evolve).
+    """
 
-    def __init__(self, old_pokemon: str, is_shiny: bool, evolutions: List[EvolutionTree]):
+    evolution_chain = get_evolution_chain(pokemon['name'])
+
+    evolution_tree = EvolutionTree(evolution_chain['chain'])
+
+    target_pokemon = find_in_tree(evolution_tree, pokemon['name'])
+
+    return target_pokemon.evolves_to
+
+
+class PickEvolution(discord.ui.View):
+    """
+    Dropdown view that allows users to select which Pokémon to evolve to if several are available.
+    """
+
+    def __init__(self, pokemon_name: str, is_shiny: bool, evolutions: List[EvolutionTree]):
         super().__init__()
-        self.old_pokemon = old_pokemon
+        self.pokemon_name = pokemon_name
         self.is_shiny = is_shiny
-        self.used = False
         self.evolutions = evolutions
+        self.used = False   # Having trouble disabling the select after an option is chosen, so using this instead.
         self.make_select()
 
     def make_select(self):
@@ -61,27 +100,29 @@ class PickEvolution(discord.ui.View):
             """Defines what happens when a select option is chosen."""
 
             if not self.used:
-                await evolve_pokemon(interaction, self.old_pokemon, select.values[0], self.is_shiny)
+                await evolve_pokemon(interaction, self.pokemon_name, select.values[0], self.is_shiny)
                 self.used = True
 
             # For some reason setting select.disabled = True does not work, so I'm doing this instead.
             else:
                 await interaction.response.defer()
 
-        # This is the actual select menu that will appear.
+        # This is the select menu that will appear.
         select = discord.ui.Select(
             placeholder="Choose evolution...",
             options=[make_option(evolution.name) for evolution in self.evolutions]
         )
 
+        # This sets the callback behavior when an option is chosen to the 'callback' func we just defined.
         select.callback = callback
 
         self.add_item(select)
 
 
 class NormalOrShiny(discord.ui.View):
+    """If the user has both variants of a Pokémon, we request they choose which they want to evolve."""
 
-    def __init__(self, pokemon_name):
+    def __init__(self, pokemon_name: str):
         super().__init__()
         self.pokemon_name = pokemon_name
 
@@ -92,6 +133,7 @@ class NormalOrShiny(discord.ui.View):
         """
 
         await continue_evolve_dialog(interaction, self.pokemon_name, False)
+        self.stop()
 
     @discord.ui.button(label='Shiny', style=discord.ButtonStyle.grey)
     async def shiny(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -100,23 +142,18 @@ class NormalOrShiny(discord.ui.View):
         """
 
         await continue_evolve_dialog(interaction, self.pokemon_name, True)
+        self.stop()
 
 
-def get_evolutions(pokemon: dict):
+async def evolve_pokemon(interaction: discord.Interaction, old: str, new: str, is_shiny: bool):
     """
-    Gets the next evolution(s) of this Pokémon (returns None if it can't evolve).
+    Evolves one Pokémon into another once all ambiguity has been dealt with.
+
+    :param interaction: An active interaction we can use to send a response.
+    :param old: The name of the Pokémon that we are evolving.
+    :param new: The name of the new Pokémon after the evolution.
+    :param is_shiny: Whether we are consuming & creating a normal or shiny Pokémon.
     """
-
-    evolution_chain = get_evolution_chain(pokemon['name'])
-
-    evolution_tree = EvolutionTree(evolution_chain['chain'], None)
-
-    target_pokemon = find_in_tree(evolution_tree, pokemon['name'])
-
-    return target_pokemon.evolves_to if target_pokemon else None
-
-
-async def evolve_pokemon(interaction: discord.Interaction, old, new, is_shiny):
 
     # Evolve Pokémon and consume Bluk Berry.
     POKEMON_DB.evolve(interaction.user, old, new, is_shiny)
@@ -131,6 +168,15 @@ async def evolve_pokemon(interaction: discord.Interaction, old, new, is_shiny):
 
 
 async def continue_evolve_dialog(interaction: discord.Interaction, pokemon_name, is_shiny):
+    """
+    Once we have determined if we are evolving a normal or shiny Pokémon,
+    we may need to determine which Pokémon to evolve into (ex: Eevee can evolve into 9 different Pokémon).
+    We encapsulate this behavior because so far in the dialog we may have consumed an interaction and created a new one.
+
+    :param interaction: An active interaction we can use to send a response.
+    :param pokemon_name: The name of the Pokémon we are evolving.
+    :param is_shiny: Whether this Pokémon is shiny or not.
+    """
 
     # Check that this Pokémon can evolve, and what it evolves into.
     evolutions = get_evolutions(get_pokemon(pokemon_name))
