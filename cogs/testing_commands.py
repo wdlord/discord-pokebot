@@ -3,6 +3,7 @@
 import discord
 from discord.ext import commands
 from cogs.encounters import run_encounter
+from cogs.evolution import get_evolutions
 from database import POKEMON_DB
 from pokeapi import get_pokemon
 
@@ -66,6 +67,30 @@ class TestingCommands(commands.Cog):
         else:
             POKEMON_DB.add_pokemon(interaction.user, pokemon_name, is_shiny)
             await interaction.response.send_message(f"{pokemon_name} was added to your Pokédex.", ephemeral=True)
+
+    @discord.app_commands.command()
+    async def berries(self, interaction: discord.Interaction, amount: int):
+        """
+        Gives the user Bluk Berries.
+        """
+
+        POKEMON_DB.give_berry(interaction.user, amount)
+        await interaction.response.send_message(f"You've received **{amount}** berries.", ephemeral=True)
+
+    @discord.app_commands.command()
+    async def tree(self, interaction: discord.Interaction, pokemon_name: str):
+        """
+        Displays what the given Pokémon can immediately evolve into.
+        """
+
+        pokemon = get_pokemon(pokemon_name)
+
+        if pokemon:
+            evolutions = get_evolutions(pokemon)
+            await interaction.response.send_message(f"{evolutions}", ephemeral=True)
+
+        else:
+            await interaction.response.send_message("Couldn't find that Pokémon.", ephemeral=True)
 
 
 async def setup(bot):

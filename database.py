@@ -136,8 +136,39 @@ class PokemonDatabase:
 
                 return favorite
 
+    def give_berry(self, user: discord.User, amount: int = 1):
+        """
+        Gives a Bluk Berry (used for evolution) to the user.
+        The only time we give multiple is when using testing commands.
+        """
 
+        self.db.update_one({'_id': user.id}, {'$inc': {'berries': amount}}, upsert=True)
 
+    def num_berries(self, user: discord.User):
+        """
+        Gets the number of berries a user has (or None if user DNE).
+        """
+
+        user_obj = self.db.find_one({'_id': user.id})
+
+        return user_obj['berries'] if user_obj else None
+
+    def evolve(self, user: discord.User, old_pokemon: str, new_pokemon: str, is_shiny: bool):
+        """
+        Evolves one of the user's Pokémon and consumes a Bluk Berry.
+        Consumes Bluk Berry, consumes old Pokémon, adds new Pokémon.
+        """
+
+        self.db.update_one(
+            {'_id': user.id},
+            {'$inc': {
+                    f'pokemon.{old_pokemon}.normal': -int(not is_shiny),
+                    f'pokemon.{old_pokemon}.shiny': -int(is_shiny),
+                    f'pokemon.{new_pokemon}.normal': int(not is_shiny),
+                    f'pokemon.{new_pokemon}.shiny': int(is_shiny),
+                    'berries': -1
+                }}
+        )
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
