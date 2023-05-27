@@ -4,8 +4,7 @@ import requests
 import random
 import json
 import unittest
-from typing import Optional, List
-from dataclasses import dataclass
+from typing import Optional
 
 
 # This loads a list of Pokémon names to be used with the 'random' button.
@@ -55,7 +54,7 @@ def get_evolution_chain(pokemon_name: str) -> dict:
     :return: The evolution chain object from https://pokeapi.co
     """
 
-    # The species ID != the Pokémon ID, so we must first look up the species and get the chain URL from there.
+    # The species ID != Pokémon ID, so we must first look up the species and get the chain URL from there.
     response1 = requests.get(f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_name}/")
 
     if response1.status_code != 200:

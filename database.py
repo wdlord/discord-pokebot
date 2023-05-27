@@ -136,12 +136,13 @@ class PokemonDatabase:
 
                 return favorite
 
-    def give_berry(self, user: discord.User):
+    def give_berry(self, user: discord.User, amount: int = 1):
         """
         Gives a Bluk Berry (used for evolution) to the user.
+        The only time we give multiple is when using testing commands.
         """
 
-        self.db.update_one({'_id': user.id}, {'$inc': {'berries': 1}}, upsert=True)
+        self.db.update_one({'_id': user.id}, {'$inc': {'berries': amount}}, upsert=True)
 
     def has_berries(self, user: discord.User):
         """

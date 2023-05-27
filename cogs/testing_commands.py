@@ -67,9 +67,16 @@ class TestingCommands(commands.Cog):
             POKEMON_DB.add_pokemon(interaction.user, pokemon_name, is_shiny)
             await interaction.response.send_message(f"{pokemon_name} was added to your Pokédex.", ephemeral=True)
 
-    # TODO: /berries
-
     # TODO: /tree <pokemon> ?
+
+    @discord.app_commands.command()
+    async def berries(self, interaction: discord.Interaction, amount: int):
+        """
+        Gives the user Bluk Berries.
+        """
+
+        POKEMON_DB.give_berry(interaction.user, amount)
+        await interaction.response.send_message(f"You've received **{amount}** berries.", ephemeral=True)
 
 
 async def setup(bot):
