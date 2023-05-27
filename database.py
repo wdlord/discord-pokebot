@@ -144,14 +144,14 @@ class PokemonDatabase:
 
         self.db.update_one({'_id': user.id}, {'$inc': {'berries': amount}}, upsert=True)
 
-    def has_berries(self, user: discord.User):
+    def num_berries(self, user: discord.User):
         """
         Gets the number of berries a user has (or None if user DNE).
         """
 
         user_obj = self.db.find_one({'_id': user.id})
 
-        return user_obj['berries'] > 0 if user_obj else False
+        return user_obj['berries'] if user_obj else None
 
     def evolve(self, user: discord.User, old_pokemon: str, new_pokemon: str, is_shiny: bool):
         """

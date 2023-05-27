@@ -246,7 +246,7 @@ class Evolution(commands.Cog):
         pokemon_name = pokemon_name.strip().lower()
 
         # Ensure that the user has Bluk Berries.
-        if not POKEMON_DB.has_berries(interaction.user):
+        if not POKEMON_DB.num_berries(interaction.user):
             await interaction.response.send_message("You don't have enough Bluk Berries.", ephemeral=True)
             return
 

@@ -13,6 +13,8 @@ class PokemonList(discord.ui.View):
     def __init__(self, user: discord.User):
         super().__init__()
         self.user = user
+        self.berry_count = POKEMON_DB.num_berries(user)
+        self.remaining_rolls = POKEMON_DB.get_remaining_rolls(user)
         self.message: discord.Message = None
         self.pokemon_total = 0
         self.pokemon_list = self.make_pokemon_list()
@@ -65,7 +67,10 @@ class PokemonList(discord.ui.View):
         first_type_name = pokemon['types'][0]['type']['name']
         type_color = constants.TYPE_TO_COLOR[first_type_name]
 
-        embed = discord.Embed(description='', color=type_color, title=f"{self.user.name}'s Pokédex")
+        # Display some basic information that will show up on every page.
+        desc = f"\n{constants.BLUK_BERRY} x{self.berry_count} | 🎲 x{self.remaining_rolls}"
+
+        embed = discord.Embed(description=desc, color=type_color, title=f"{self.user.name}'s Pokédex")
 
         # Set the embed thumbnail to the user's favorite Pokémon.
         favorite_sprite = (
