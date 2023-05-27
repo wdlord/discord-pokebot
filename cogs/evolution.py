@@ -221,13 +221,6 @@ class Evolution(commands.Cog):
             is_shiny = pokemon['shiny'] > 0
             await continue_evolve_dialog(interaction, pokemon_name, is_shiny)
 
-    @discord.app_commands.command()
-    async def test(self, interaction: discord.Interaction, pokemon_name: str):
-        evolutions = get_evolutions(get_pokemon(pokemon_name))
-        print(evolutions)
-        view = PickEvolution(evolutions)
-        await interaction.response.send_message(f"{evolutions}", view=view, ephemeral=True)
-
 
 async def setup(bot):
     """
