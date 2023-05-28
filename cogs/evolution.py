@@ -73,7 +73,7 @@ def get_evolutions(pokemon: dict) -> List[EvolutionTree]:
     return target_pokemon.evolves_to
 
 
-class PickEvolution(discord.ui.View):
+class EvolutionDropdown(discord.ui.View):
     """
     Dropdown view that allows users to select which Pokémon to evolve to if several are available.
     """
@@ -120,7 +120,9 @@ class PickEvolution(discord.ui.View):
 
 
 class NormalOrShiny(discord.ui.View):
-    """If the user has both variants of a Pokémon, we request they choose which they want to evolve."""
+    """
+    If the user has both variants of a Pokémon, we request they choose which they want to evolve.
+    """
 
     def __init__(self, pokemon_name: str):
         super().__init__()
@@ -189,7 +191,7 @@ async def continue_evolve_dialog(interaction: discord.Interaction, pokemon_name,
 
     # If this Pokémon has multiple possible evolutions, the user needs to select one.
     else:
-        view = PickEvolution(pokemon_name, is_shiny, evolutions)
+        view = EvolutionDropdown(pokemon_name, is_shiny, evolutions)
         message = "Choose the evolution: Careful! Once you select an option your choice is final!"
         await interaction.response.send_message(message, view=view, ephemeral=True)
 
@@ -204,7 +206,6 @@ class Evolution(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 
@@ -226,11 +227,16 @@ class Evolution(commands.Cog):
         This berry can be consumed to evolve a Pokémon in the user's Pokédex.
         """
 
-        # This first keeps the bot from triggering a drop before running the random function.
-        if message.author.id != self.bot.user.id and random.random() < constants.BERRY_CHANCE:
+        # Ignores messages from bots.
+        if message.author.bot:
+            return
+
+        # Each message has a percentage chance to reward a Bluk Berry.
+        if random.random() < constants.BERRY_CHANCE:
+
             msg_content = (
                 f"You just received a **Bluk Berry**! {constants.BLUK_BERRY} "
-                "*You can consume this to evolve one of your Pokémon with /evolve <pokemon>.*"
+                "*You can consume this to evolve one of your Pokémon with `/evolve <pokemon>`.*"
             )
 
             POKEMON_DB.give_berry(message.author)
@@ -245,27 +251,23 @@ class Evolution(commands.Cog):
 
         pokemon_name = pokemon_name.strip().lower()
 
-        # Ensure that the user has Bluk Berries.
+        # The user needs at least one Bluk Berry.
         if not POKEMON_DB.num_berries(interaction.user):
             await interaction.response.send_message("You don't have enough Bluk Berries.", ephemeral=True)
             return
 
         pokemon = POKEMON_DB.get_pokemon_data(interaction.user, pokemon_name)
 
-        # Ensure that the user has that Pokémon.
         if not pokemon['normal'] and not pokemon['shiny']:
             await interaction.response.send_message("You don't have that Pokémon.", ephemeral=True)
 
-        # Determine which (normal or shiny) to evolve if necessary.
         elif pokemon['normal'] and pokemon['shiny']:
-            view = NormalOrShiny(pokemon_name)
-            message = f"Would you like to evolve the normal or shiny {pokemon_name.title()}?"
-            await interaction.response.send_message(message, view=view, ephemeral=True)
+            prompt = f"Would you like to evolve the normal or shiny **{pokemon_name.title()}**?"
+            await interaction.response.send_message(prompt, view=NormalOrShiny(pokemon_name), ephemeral=True)
 
-        # We don't need to determine which to evolve if they don't have both.
+        # If the user only has a normal OR shiny version, we don't need to ask them which to set.
         elif pokemon['normal'] or pokemon['shiny']:
-            is_shiny = pokemon['shiny'] > 0
-            await continue_evolve_dialog(interaction, pokemon_name, is_shiny)
+            await continue_evolve_dialog(interaction, pokemon_name, pokemon['shiny'] > 0)
 
 
 async def setup(bot):

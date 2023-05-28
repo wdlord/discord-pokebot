@@ -9,7 +9,8 @@ import constants
 
 class PokemonSearchCard(discord.ui.View):
     """
-    View for a card that appears when searching a Pokémon.
+    View that appears when searching a Pokémon.
+    Also shows some stats about how many of this Pokémon the user owns.
     """
 
     def __init__(self, pokemon: dict, pokemon_data: dict):
@@ -19,7 +20,7 @@ class PokemonSearchCard(discord.ui.View):
         self.pokemon = pokemon
         self.pokemon_data = pokemon_data
 
-    def make_card(self) -> discord.Embed:
+    def make_embed(self) -> discord.Embed:
         """
         Generates an embed object showing a Pokémon and the user's stats for that Pokémon.
         """
@@ -39,26 +40,20 @@ class PokemonSearchCard(discord.ui.View):
 
         embed = discord.Embed(description=desc, color=type_color, title=f"{self.pokemon['name'].title()}")
 
-        # Try to use an animated version of the sprite, but if it doesn't exist we just use the static version.
-        sprite_url = (
-                self.pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if self.is_shiny else 'front_default']
-                or
-                self.pokemon['sprites']['front_shiny' if self.is_shiny else 'front_default']
-        )
-
+        # Set the embed image to the sprite for this Pokémon.
+        sprite_url = constants.get_sprite(self.pokemon, self.is_shiny)
         embed.set_image(url=sprite_url)
 
         return embed
 
     async def send_card(self, interaction: discord.Interaction):
         """
-        Sends original message that shows the view. We do it within the class to save the message locally.
+        Sends original message that shows the view. Done from within the class to save the message locally.
 
-        :param interaction: The interaction of the command used.
-        :return:
+        :param interaction: An active interaction that we can use to send a response.
         """
 
-        await interaction.response.send_message(embed=self.make_card(), view=self)
+        await interaction.response.send_message(embed=self.make_embed(), view=self)
         self.message = await interaction.original_response()
 
     @discord.ui.button(label='View Shiny', style=discord.ButtonStyle.green)
@@ -71,7 +66,7 @@ class PokemonSearchCard(discord.ui.View):
         button.label = 'View Normal' if self.is_shiny else 'View Shiny'
 
         # Remake the embed with the alternate sprite, and update the message.
-        await self.message.edit(embed=self.make_card(), view=self)
+        await self.message.edit(embed=self.make_embed(), view=self)
 
         # We must acknowledge the interaction in some way.
         await interaction.response.defer()
@@ -87,7 +82,6 @@ class SearchPokemon(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 
@@ -111,11 +105,9 @@ class SearchPokemon(commands.Cog):
         name = name.lower().strip()
         pokemon = get_pokemon(name)
 
-        # Behavior if the lookup failed.
         if not pokemon:
             await interaction.response.send_message("We couldn't find that pokemon.", ephemeral=True)
 
-        # Behavior if the lookup succeeded.
         else:
             pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, pokemon['name'])
             search_card = PokemonSearchCard(pokemon, pokemon_data)

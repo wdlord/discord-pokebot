@@ -2,6 +2,26 @@
 
 """This module defines project-level constants."""
 
+
+def get_sprite(pokemon: dict, is_shiny: bool) -> str:
+    # TODO: this is better suited for a utils class, but currently nothing else would go in there.
+    """
+    Tries to get the animated sprite for a Pokémon if available, otherwise gets the default static sprite.
+    Extension is .gif if animated, .png if static.
+    """
+
+    sprite_type = 'front_shiny' if is_shiny else 'front_default'
+
+    # The animated sprite can be None, so this statement will return the default sprite in that case.
+    sprite_url = (
+        pokemon['sprites']['versions']['generation-v']['black-white']['animated'][sprite_type]
+        or
+        pokemon['sprites'][sprite_type]
+    )
+
+    return sprite_url
+
+
 ENCOUNTER_CHANCE = 0.005
 SHINY_CHANCE = 0.01
 BERRY_CHANCE = 0.01

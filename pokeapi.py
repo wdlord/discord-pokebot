@@ -12,18 +12,18 @@ with open('pokemon_names.json', 'r') as f:
     pokemon_names = json.load(f)
 
 
-def get_pokemon(name: Optional[str] = None) -> Optional[dict]:
+def get_pokemon(pokemon_name: Optional[str] = None) -> Optional[dict]:
     """
     Get a Pokémon by name, or a random Pokémon if no argument is passed.
 
-    :param name: Case-insensitive Pokémon name (or None).
+    :param pokemon_name: Case-insensitive Pokémon name (or None).
     :return: Pokémon dict from https://pokeapi.co
     """
 
     # Randomly select a Pokémon if no name is supplied.
-    if not name:
-        name = pokemon_names[random.randrange(0, len(pokemon_names))]
-        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name.lower()}/")
+    if not pokemon_name:
+        pokemon_name = pokemon_names[random.randrange(0, len(pokemon_names))]
+        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}/")
 
         # Get a new random Pokémon if the one we used could not be found.
         if response.status_code == 404:
@@ -36,11 +36,11 @@ def get_pokemon(name: Optional[str] = None) -> Optional[dict]:
 
     # Attempt lookup if a name was supplied.
     else:
-        name = name.lower().strip()
-        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{name}/")
+        pokemon_name = pokemon_name.lower().strip()
+        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}/")
 
         if response.status_code != 200:
-            print(f"pokeapi error: {response.status_code}: {name}")
+            print(f"pokeapi error: {response.status_code}: {pokemon_name}")
             return None
 
         return response.json()

@@ -8,13 +8,16 @@ import constants
 from math import ceil
 
 
-class PokemonList(discord.ui.View):
+class PokedexPage(discord.ui.View):
+    """
+    This class manages the view of the Pokédex.
+    """
 
     def __init__(self, user: discord.User):
         super().__init__()
         self.user = user
         self.berry_count = POKEMON_DB.num_berries(user)
-        self.remaining_rolls = POKEMON_DB.get_remaining_rolls(user)
+        self.remaining_rolls = POKEMON_DB.get_remaining_rolls(user, upsert=False)
         self.message: discord.Message = None
         self.pokemon_total = 0
         self.pokemon_list = self.make_pokemon_list()
@@ -23,7 +26,7 @@ class PokemonList(discord.ui.View):
 
     def make_pokemon_list(self):
         """
-        Converts the Pokémon from the database into a list of formatted lines we will show in the embed.
+        Converts the Pokémon from the database into a list of formatted Pokédex entries.
         """
 
         user_pokemon = POKEMON_DB.get_all_pokemon(self.user)
@@ -36,8 +39,9 @@ class PokemonList(discord.ui.View):
 
         for name in sorted(user_pokemon.keys()):
 
-            # Show normal versions of this Pokémon.
-            normal_total = int(user_pokemon[name]['normal'])
+            # Show normal versions of this Pokémon (if any exist).
+
+            normal_total = user_pokemon[name]['normal']
             self.pokemon_total += normal_total
 
             if normal_total > 0:
@@ -45,7 +49,8 @@ class PokemonList(discord.ui.View):
                 pokemon_list.append(f"{name.title()} {multiplier}")
 
             # Show shiny versions of this Pokémon (if any exist).
-            shiny_total = int(user_pokemon[name]['shiny'])
+
+            shiny_total = user_pokemon[name]['shiny']
             self.pokemon_total += shiny_total
 
             if shiny_total > 0:
@@ -55,9 +60,25 @@ class PokemonList(discord.ui.View):
 
         return pokemon_list
 
+    def get_pokedex_slice(self) -> list:
+        """
+        Gets the 10 Pokémon that should appear on this page of the Pokédex.
+        There may be fewer than 10 if this is the last page.
+        """
+
+        lower_bound = self.page * 10
+
+        # This case avoids IndexError on the last page.
+        if len(self.pokemon_list) < lower_bound + 10:
+            return self.pokemon_list[lower_bound:]
+
+        # This is the standard case that displays 10 Pokémon.
+        else:
+            return self.pokemon_list[lower_bound:lower_bound + 10]
+
     def make_embed(self):
         """
-        Creates the embed that shows a given page of the user's Pokédex.
+        Creates the embed that represents a page of the user's Pokédex.
         """
 
         favorite = POKEMON_DB.get_favorite(self.user)
@@ -67,32 +88,20 @@ class PokemonList(discord.ui.View):
         first_type_name = pokemon['types'][0]['type']['name']
         type_color = constants.TYPE_TO_COLOR[first_type_name]
 
-        # Display some basic information that will show up on every page.
+        # This represents some basic information that will show up on every page.
         desc = f"\n{constants.BLUK_BERRY} x{self.berry_count} | 🎲 x{self.remaining_rolls}"
 
         embed = discord.Embed(description=desc, color=type_color, title=f"{self.user.name}'s Pokédex")
 
         # Set the embed thumbnail to the user's favorite Pokémon.
-        favorite_sprite = (
-                pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if favorite['is_shiny'] else 'front_default']
-                or
-                pokemon['sprites']['front_shiny' if favorite['is_shiny'] else 'front_default']
-        )
+        favorite_sprite = constants.get_sprite(pokemon, favorite['is_shiny'])
         embed.set_thumbnail(url=favorite_sprite)
 
-        # Get the slice of the Pokédex to show.
-        lower_bound = self.page * 10
+        # Add the appropriate slice of the Pokédex to the display.
+        pokedex_slice = '\n'.join(self.get_pokedex_slice())
+        embed.add_field(name="", value=pokedex_slice)
 
-        if len(self.pokemon_list) < lower_bound + 10:
-            pokedex_slice = self.pokemon_list[lower_bound:]
-
-        else:
-            pokedex_slice = self.pokemon_list[lower_bound:lower_bound + 10]
-
-        value = '\n'.join(pokedex_slice)
-
-        embed.add_field(name="", value=value)
-
+        # Show total Pokémon and page status.
         embed.set_footer(text=f"Total: {self.pokemon_total} - Page {self.page + 1} of {self.total_pages}")
 
         return embed
@@ -164,6 +173,9 @@ class PokemonList(discord.ui.View):
 
 
 class NormalOrShiny(discord.ui.View):
+    """
+    Lets the user choose between setting the normal or shiny Pokémon as their favorite.
+    """
 
     def __init__(self, pokemon_name):
         super().__init__()
@@ -200,7 +212,6 @@ class Pokedex(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 
@@ -218,33 +229,34 @@ class Pokedex(commands.Cog):
     @discord.app_commands.command()
     async def pokedex(self, interaction: discord.Interaction, user: discord.User = None):
         """
-        View your captured Pokémon.
+        View your (or another user's) captured Pokémon.
         """
 
-        pokedex_view = PokemonList(user or interaction.user)
+        # Uses 'user' if supplied, otherwise uses the user who called the command.
+        pokedex_view = PokedexPage(user or interaction.user)
         await pokedex_view.send(interaction)
 
     @discord.app_commands.command()
-    async def favorite(self, interaction: discord.Interaction, name: str):
+    async def favorite(self, interaction: discord.Interaction, pokemon_name: str):
         """
         Set the Pokémon that appears in your Pokédex thumbnail.
         """
 
-        name = name.lower().strip()
+        pokemon_name = pokemon_name.lower().strip()
 
-        pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, name)
+        pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, pokemon_name)
 
         if not pokemon_data['normal'] and not pokemon_data['shiny']:
             await interaction.response.send_message("You do not own any of that Pokémon.", ephemeral=True)
 
         elif pokemon_data['normal'] and pokemon_data['shiny']:
-            prompt = "Would you like to set the normal or shiny Pokémon as your favorite?"
-            await interaction.response.send_message(prompt, view=NormalOrShiny(name), ephemeral=True)
+            prompt = f"Would you like to set the normal or shiny **{pokemon_name.title()}** as your favorite?"
+            await interaction.response.send_message(prompt, view=NormalOrShiny(pokemon_name), ephemeral=True)
 
-        # if the user only owns a normal OR shiny variant, we don't need to ask them which version to set.
+        # if the user only owns a normal OR shiny variant, we don't need to ask them which to set.
         elif pokemon_data['normal'] or pokemon_data['shiny']:
-            POKEMON_DB.set_favorite(interaction.user, name, pokemon_data['shiny'] > 0)
-            await interaction.response.send_message(f"**{name.title()}** has been set as your favorite Pokémon.", ephemeral=True)
+            POKEMON_DB.set_favorite(interaction.user, pokemon_name, pokemon_data['shiny'] > 0)
+            await interaction.response.send_message(f"**{pokemon_name.title()}** has been set as your favorite Pokémon.", ephemeral=True)
 
 
 async def setup(bot):

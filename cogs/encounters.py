@@ -29,33 +29,26 @@ class EncounterView(discord.ui.View):
         if interaction.user.id in self.claimed_by:
             await interaction.response.send_message("You've already claimed this Pokémon.", ephemeral=True)
 
-        # Behavior if the user has not yet claimed the Pokémon.
+        # Add the Pokémon to the user's Pokédex if they have not already claimed it.
         else:
             POKEMON_DB.add_pokemon(interaction.user, self.pokemon['name'], self.is_shiny)
             self.claimed_by.append(interaction.user.id)
-            await interaction.response.send_message(f"{interaction.user.name} claimed {self.pokemon['name'].title()}!")
+            await interaction.response.send_message(f"{interaction.user.name} claimed **{self.pokemon['name'].title()}**!")
 
 
 async def make_file(pokemon: dict, is_shiny: bool) -> discord.File:
     """
     Makes a discord.File object for a Pokémon's image sprite.
     Externally hosted images must be downloaded to a discord.File object to be sent directly to a channel.
+    (This is not necessary if the image is being sent in an embed.)
     https://discordpy.readthedocs.io/en/stable/faq.html#how-do-i-upload-an-image
     """
 
     import io
     import aiohttp
 
-    sprite_url = pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if is_shiny else 'front_default']
-
-    if sprite_url:
-        extension = "gif"
-
-    # The sprite URL may be None, indicating that there is not an animated sprite for this Pokémon.
-    # In this case we switch to the default static image sprite.
-    else:
-        sprite_url = pokemon['sprites']['front_shiny' if is_shiny else 'front_default']
-        extension = "png"
+    sprite_url = constants.get_sprite(pokemon, is_shiny)
+    extension = "gif" if sprite_url.endswith(".gif") else "png"
 
     async with aiohttp.ClientSession() as session:
         async with session.get(sprite_url) as resp:
@@ -84,12 +77,14 @@ async def run_encounter(channel: discord.TextChannel):
     pokemon_sprite = await make_file(pokemon, is_shiny)
     grass_sprite = discord.File("./grass_small.png")
 
-    # The code that handles claiming the Pokémon when the button is clicked is in this class.
+    # This view displays our Pokémon and a 'Catch' button.
+    # The code that handles the button interaction is also in this class.
     view = EncounterView(pokemon, is_shiny)
 
     # The encounter is sent in two separate messages:
-    # The first is the alert and animated Pokémon sprite.
+    # The first is the alert and the Pokémon sprite.
     # The second is the grass sprite with the 'Catch' button view attached.
+    # It's sent in separate messages because the images won't display properly in the same message.
     await channel.send(alert, file=pokemon_sprite)
     await channel.send(file=grass_sprite, view=view)
 
@@ -104,7 +99,6 @@ class Encounters(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 
@@ -126,8 +120,12 @@ class Encounters(commands.Cog):
         In an encounter, a random Pokémon appears, and the user can click a button to capture it.
         """
 
-        # This first keeps the bot from triggering an encounter before running the random function.
-        if message.author.id != self.bot.user.id and random.random() < constants.ENCOUNTER_CHANCE:
+        # Ignores messages from bots.
+        if message.author.bot:
+            return
+
+        # Each message has a percentage chance to trigger an encounter.
+        if random.random() < constants.ENCOUNTER_CHANCE:
             await run_encounter(message.channel)
 
 

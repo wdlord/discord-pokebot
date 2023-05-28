@@ -18,7 +18,6 @@ class TestingCommands(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 
@@ -40,8 +39,10 @@ class TestingCommands(commands.Cog):
         In an encounter, a random Pokémon appears, and the user can click a button to capture it.
         """
 
+        # TODO: No matter what I do it won't stop thinking, but this isn't user facing anyways.
+
+        await interaction.response.defer(thinking=False)
         await run_encounter(interaction.channel)
-        await interaction.response.defer()
 
     @discord.app_commands.command()
     async def reset(self, interaction: discord.Interaction):
@@ -66,7 +67,7 @@ class TestingCommands(commands.Cog):
 
         else:
             POKEMON_DB.add_pokemon(interaction.user, pokemon_name, is_shiny)
-            await interaction.response.send_message(f"{pokemon_name} was added to your Pokédex.", ephemeral=True)
+            await interaction.response.send_message(f"**{pokemon_name.title()}** was added to your Pokédex.", ephemeral=True)
 
     @discord.app_commands.command()
     async def berries(self, interaction: discord.Interaction, amount: int):
@@ -85,12 +86,12 @@ class TestingCommands(commands.Cog):
 
         pokemon = get_pokemon(pokemon_name)
 
-        if pokemon:
-            evolutions = get_evolutions(pokemon)
-            await interaction.response.send_message(f"{evolutions}", ephemeral=True)
+        if not pokemon:
+            await interaction.response.send_message("Couldn't find that Pokémon.", ephemeral=True)
 
         else:
-            await interaction.response.send_message("Couldn't find that Pokémon.", ephemeral=True)
+            evolutions = get_evolutions(pokemon)
+            await interaction.response.send_message(f"{evolutions}", ephemeral=True)
 
 
 async def setup(bot):

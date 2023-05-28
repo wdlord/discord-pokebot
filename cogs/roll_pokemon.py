@@ -11,7 +11,7 @@ import datetime
 
 class PokemonRollCard(discord.ui.View):
     """
-    This is the view for a card (including Next button) in the pokéroll.
+    Represents a Pokémon from the /roll command.
     """
 
     def __init__(self, remaining_rolls):
@@ -28,54 +28,56 @@ class PokemonRollCard(discord.ui.View):
         self.stop()
 
 
-async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
+def make_embed(pokemon: dict, is_shiny: bool) -> discord.Embed:
     """
-    Recursively generates new cards until the user is out of rolls.
-
-    :param interaction: Either the interaction from the command, or from the 'Next' button.
-    :param remaining_rolls: How many more rolls the user has available.
-    This is used to avoid accessing the database unnecessarily.
+    Creates the embed for a Pokémon roll card.
     """
-
-    pokemon = get_pokemon()
-    is_shiny = random.random() < constants.SHINY_CHANCE
 
     # Get the color corresponding to the first type of this Pokémon to use as the embed color.
     first_type_name = pokemon['types'][0]['type']['name']
     type_color = constants.TYPE_TO_COLOR[first_type_name]
 
-    # Set the embed description.
-    # Here we add custom discord emotes corresponding to the Pokémon's types.
+    # Here we add custom discord emotes corresponding to the Pokémon's types to the embed.
     # We also add an extra indicator only if the Pokémon is shiny.
     desc = f"{''.join(constants.TYPE_TO_ICON[t['type']['name']] for t in pokemon['types'])}"
     desc += "\n✨Shiny✨" if is_shiny else ""
 
     embed = discord.Embed(description=desc, color=type_color, title=f"{pokemon['name'].title()}")
 
-    # Try to use an animated version of the sprite, but if it doesn't exist we just use the static version.
-    sprite_url = (
-            pokemon['sprites']['versions']['generation-v']['black-white']['animated']['front_shiny' if is_shiny else 'front_default']
-            or
-            pokemon['sprites']['front_shiny' if is_shiny else 'front_default']
-    )
-
+    # Set the embed image to the Pokémon's sprite.
+    sprite_url = constants.get_sprite(pokemon, is_shiny)
     embed.set_image(url=sprite_url)
 
+    return embed
+
+
+async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
+    """
+    Recursively generates new cards until the user is out of rolls.
+
+    :param interaction: Either the interaction from the command, or from the 'Next' button.
+    :param remaining_rolls: How many more rolls the user has available.
+    """
+
+    # Create a new random Pokémon.
+    pokemon = get_pokemon()
+    is_shiny = random.random() < constants.SHINY_CHANCE
+
     # Add the Pokémon to the user's Pokédex.
-    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], shiny=is_shiny)
+    POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], is_shiny=is_shiny)
 
     # Adjust the user's remaining rolls.
     POKEMON_DB.use_roll(interaction.user)
-    remaining_rolls -= 1
+    remaining_rolls -= 1    # this avoids unnecessary database access.
 
-    # If the user still has more cards to open, we recursively create another card.
+    # If the user still has more cards to open, we recursively create another card WITH a 'Next' button.
     if remaining_rolls > 0:
         view = PokemonRollCard(remaining_rolls)
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=make_embed(pokemon, is_shiny), view=view)
 
-    # Else we only have to send this card without a 'Next' button.
+    # Else we can send the card without a 'Next' button.
     else:
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=make_embed(pokemon, is_shiny))
 
 
 def get_reset_time() -> str:
@@ -101,7 +103,6 @@ class RollPokemon(commands.Cog):
 
     async def load(self):
         """
-        Utility function for initializing our cache of guild configs.
         Called in on_ready() event.
         """
 

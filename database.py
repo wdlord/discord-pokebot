@@ -8,41 +8,35 @@ import constants
 
 
 class PokemonDatabase:
+    """
+    Connection with the MongoDB collection.
+    """
 
     def __init__(self):
         self.db = client['Pokeroll']['pokemon']
 
-    def add_pokemon(self, user: discord.User, pokemon: str, shiny: bool):
+    def add_pokemon(self, user: discord.User, pokemon_name: str, is_shiny: bool):
         """
         Adds a Pokémon to a user's Pokédex.
-
-        :param user: The discord user that is receiving a new Pokémon.
-        :param pokemon: The name of the new Pokémon.
-        :param shiny: Whether the Pokémon is a shiny variant.
-        :return:
         """
 
         self.db.update_one(
             {'_id': user.id},
             {'$inc': {
-                f'pokemon.{pokemon}.normal': int(not shiny),
-                f'pokemon.{pokemon}.shiny': int(shiny),
+                f'pokemon.{pokemon_name}.normal': int(not is_shiny),
+                f'pokemon.{pokemon_name}.shiny': int(is_shiny),
             }},
             upsert=True
         )
 
-    def get_pokemon_data(self, user: discord.User, pokemon: str) -> dict:
+    def get_pokemon_data(self, user: discord.User, pokemon_name: str) -> dict:
         """
         Gets the saved data for a user's particular Pokémon.
-
-        :param user: The discord user that we are searching for a Pokémon.
-        :param pokemon: The name of the Pokémon to search.
-        :return:
         """
 
         user_obj = self.db.find_one({'_id': user.id})
         pokemon_list = user_obj['pokemon']
-        return pokemon_list.get(f'{pokemon}', {'normal': 0, 'shiny': 0})
+        return pokemon_list.get(f'{pokemon_name}', {'normal': 0, 'shiny': 0})
 
     def get_all_pokemon(self, user: discord.User) -> dict:
         """
@@ -74,7 +68,7 @@ class PokemonDatabase:
 
         self.db.update_one({'_id': user.id}, {'$inc': {'remaining_rolls': -1}})
 
-    def get_remaining_rolls(self, user: discord.User):
+    def get_remaining_rolls(self, user: discord.User, upsert=True):
         """
         Gets the number of Pokémon rolls a user has left.
         """
@@ -87,10 +81,10 @@ class PokemonDatabase:
 
         # Creates remaining_rolls field if necessary.
         except TypeError:
-            self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}}, upsert=True)
+            self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}}, upsert=upsert)
             return constants.MAX_ROLLS
 
-    def set_favorite(self, user: discord.User, pokemon: str, is_shiny: bool):
+    def set_favorite(self, user: discord.User, pokemon_name: str, is_shiny: bool):
         """
         Sets the user's favorite Pokémon for their Pokédex.
         """
@@ -99,7 +93,7 @@ class PokemonDatabase:
             {'_id': user.id},
             {'$set': {
                 'favorite': {
-                    'name': pokemon,
+                    'name': pokemon_name,
                     'is_shiny': is_shiny
                 }
             }},
