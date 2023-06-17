@@ -36,11 +36,11 @@ class PokemonDatabase:
 
         user_obj = self.db.find_one({'_id': user.id})
 
-        if not user_obj or not user_obj['pokemon'].get(f'{pokemon_name}', None):
+        if not user_obj or not user_obj['pokemon'].get(pokemon_name, None):
             return {'normal': 0, 'shiny': 0}
 
         else:
-            return user_obj['pokemon'][f'pokemon_name']
+            return user_obj['pokemon'][pokemon_name]
 
     def get_all_pokemon(self, user: discord.User) -> dict:
         """
