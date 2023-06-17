@@ -14,9 +14,10 @@ class PokemonRollCard(discord.ui.View):
     Represents a Pokémon from the /roll command.
     """
 
-    def __init__(self, remaining_rolls):
+    def __init__(self, remaining_rolls, user):
         super().__init__()
         self.remaining_rolls = remaining_rolls
+        self.user = user
 
     @discord.ui.button(label='Next', style=discord.ButtonStyle.green)
     async def card_view(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -24,7 +25,10 @@ class PokemonRollCard(discord.ui.View):
         Defines the interaction when the Next button is clicked when rolling Pokémon.
         """
 
-        await roll_pokemon(interaction, self.remaining_rolls)
+        if interaction.user != self.user:
+            return
+
+        await roll_pokemon(interaction, self.remaining_rolls, user)
         self.stop()
 
 
@@ -51,7 +55,7 @@ def make_embed(pokemon: dict, is_shiny: bool) -> discord.Embed:
     return embed
 
 
-async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
+async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, user: discord.User):
     """
     Recursively generates new cards until the user is out of rolls.
 
@@ -72,7 +76,7 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int):
 
     # If the user still has more cards to open, we recursively create another card WITH a 'Next' button.
     if remaining_rolls > 0:
-        view = PokemonRollCard(remaining_rolls)
+        view = PokemonRollCard(remaining_rolls, user)
         await interaction.response.send_message(embed=make_embed(pokemon, is_shiny), view=view)
 
     # Else we can send the card without a 'Next' button.
@@ -135,7 +139,7 @@ class RollPokemon(commands.Cog):
         remaining_rolls = POKEMON_DB.get_remaining_rolls(interaction.user)
 
         if remaining_rolls > 0:
-            await roll_pokemon(interaction, remaining_rolls)
+            await roll_pokemon(interaction, remaining_rolls, interaction.user)
 
         else:
             message = f"You've used all your rolls. Rolls reset in **{get_reset_time()}**."
