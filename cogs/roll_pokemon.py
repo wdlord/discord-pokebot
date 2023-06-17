@@ -28,7 +28,7 @@ class PokemonRollCard(discord.ui.View):
         if interaction.user != self.user:
             return
 
-        await roll_pokemon(interaction, self.remaining_rolls, user)
+        await roll_pokemon(interaction, self.remaining_rolls, self.user)
         self.stop()
 
 
