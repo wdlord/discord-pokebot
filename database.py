@@ -149,7 +149,7 @@ class PokemonDatabase:
 
         user_obj = self.db.find_one({'_id': user.id})
 
-        return user_obj['berries'] if user_obj else None
+        return user_obj.get('berries', 0) if user_obj else None
 
     def evolve(self, user: discord.User, old_pokemon: str, new_pokemon: str, is_shiny: bool):
         """
