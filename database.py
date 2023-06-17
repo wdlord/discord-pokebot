@@ -36,7 +36,7 @@ class PokemonDatabase:
 
         user_obj = self.db.find_one({'_id': user.id})
 
-        if not user_obj or not user_obj['pokemon'][f'pokemon_name']:
+        if not user_obj or not user_obj['pokemon'].get(f'pokemon_name', None):
             return {'normal': 0, 'shiny': 0}
 
         else:
