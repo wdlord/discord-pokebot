@@ -118,7 +118,9 @@ class RollPokemon(commands.Cog):
         This task resets the Pokémon rolls every day at midnight UTC.
         """
 
+        print("Resetting all rolls...")
         POKEMON_DB.reset_all_rolls()
+        print("Reset complete.")
 
     @commands.Cog.listener()
     async def on_ready(self):
