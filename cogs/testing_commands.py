@@ -54,6 +54,15 @@ class TestingCommands(commands.Cog):
         await interaction.response.send_message("Your rolls have been reset.", ephemeral=True)
 
     @discord.app_commands.command()
+    async def resetall(self, interaction: discord.Interaction):
+        """
+        Resets the rolls for all users.
+        """
+
+        POKEMON_DB.reset_all_rolls()
+        await interaction.response.send_message("All rolls have been reset.", ephemeral=True)
+
+    @discord.app_commands.command()
     async def give(self, interaction: discord.Interaction, pokemon_name: str, is_shiny: bool):
         """
         Gives the user one of the specified Pokémon.
