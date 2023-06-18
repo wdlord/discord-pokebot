@@ -84,7 +84,7 @@ class PokemonDatabase:
             return remaining_rolls
 
         # Creates remaining_rolls field if necessary.
-        except TypeError:
+        except TypeError, KeyError:
             self.db.update_one({'_id': user.id}, {'$set': {'remaining_rolls': constants.MAX_ROLLS}}, upsert=upsert)
             return constants.MAX_ROLLS
 
