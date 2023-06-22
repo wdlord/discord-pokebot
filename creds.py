@@ -6,3 +6,5 @@ import os
 TOKEN = os.environ['TOKEN']
 MONGO_USER = os.environ['MONGO_USER']
 MONGO_PASSWORD = os.environ['MONGO_PASSWORD']
+
+DEV_TOKEN = os.environ.get('DEV_TOKEN')

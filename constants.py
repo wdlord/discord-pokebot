@@ -1,5 +1,7 @@
 # Code by https://github.com/wdlord
 
+import datetime
+
 """This module defines project-level constants."""
 
 
@@ -28,6 +30,12 @@ BERRY_CHANCE = 0.01
 MAX_ROLLS = 3
 
 BLUK_BERRY = "<:blukberry:1111793629279834270>"
+
+# These times are UTC.
+RESET_TIMES = [
+    datetime.time(hour=0, tzinfo=datetime.timezone.utc),
+    datetime.time(hour=12, tzinfo=datetime.timezone.utc)
+]
 
 TYPE_TO_COLOR = {
     'normal': 0xA8A77A,

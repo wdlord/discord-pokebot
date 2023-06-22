@@ -86,15 +86,17 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, u
 
 def get_reset_time() -> str:
     """
-    Calculates how long until the rolls reset (aka how long until midnight UTC).
-    Returned as a string such as "23 hours and 3 minutes".
+    Calculates how long until the next rolls reset.
+    Returned as a string such as "4 hours and 3 minutes".
     """
 
     now = datetime.datetime.now(datetime.timezone.utc)
-    tomorrow = now + datetime.timedelta(days=1)
-    reset_time = datetime.datetime.combine(tomorrow, datetime.time.min, datetime.timezone.utc) - now
 
-    return f" {reset_time.seconds // 3600} hours and {(reset_time.seconds // 60) % 60} minutes"
+    times = [datetime.datetime.combine(now, t) for t in constants.RESET_TIMES]
+    differences = [t - now for t in times if (t - now).total_seconds() > 0]
+    closest = min(differences)
+
+    return f" {closest.seconds // 3600} hours and {(closest.seconds // 60) % 60} minutes"
 
 
 class RollPokemon(commands.Cog):
@@ -104,6 +106,7 @@ class RollPokemon(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.reset_rolls.start()
 
     async def load(self):
         """
@@ -112,7 +115,7 @@ class RollPokemon(commands.Cog):
 
         await self.bot.wait_until_ready()
 
-    @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
+    @tasks.loop(time=constants.RESET_TIMES)
     async def reset_rolls(self):
         """
         This task resets the Pokémon rolls every day at midnight UTC.
