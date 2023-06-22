@@ -90,7 +90,15 @@ def get_reset_time() -> str:
 
     times = [datetime.datetime.combine(now, t) for t in constants.RESET_TIMES]
     differences = [t - now for t in times if (t - now).total_seconds() > 0]
-    closest = min(differences)
+
+    # Gets the closest time today that hasn't passed.
+    if differences:
+        closest = min(differences)
+
+    # If there are no times that haven't passed, gets 00:00:00 tomorrow.
+    else:
+        tomorrow = now + datetime.timedelta(days=1)
+        closest = datetime.datetime.combine(tomorrow, datetime.time(tzinfo=datetime.timezone.utc)) - now
 
     return f" {closest.seconds // 3600} hours and {(closest.seconds // 60) % 60} minutes"
 

@@ -24,9 +24,9 @@ def get_sprite(pokemon: dict, is_shiny: bool) -> str:
     return sprite_url
 
 
-ENCOUNTER_CHANCE = 0.005
+ENCOUNTER_CHANCE = 0.01
 SHINY_CHANCE = 0.01
-BERRY_CHANCE = 0.01
+BERRY_CHANCE = 0.02
 MAX_ROLLS = 3
 
 BLUK_BERRY = "<:blukberry:1111793629279834270>"
