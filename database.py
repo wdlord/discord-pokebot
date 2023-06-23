@@ -5,6 +5,14 @@ from pymongo.server_api import ServerApi
 import discord
 from creds import MONGO_USER, MONGO_PASSWORD
 import constants
+from dataclasses import dataclass
+
+
+@dataclass
+class TradeablePokemon:
+    name: str
+    is_shiny: bool
+    owner: discord.User
 
 
 class PokemonDatabase:
@@ -167,6 +175,47 @@ class PokemonDatabase:
                     'berries': -1
                 }}
         )
+
+    def trade(self, your_pokemon: TradeablePokemon, their_pokemon: TradeablePokemon):
+        """
+        Trades one Pokémon for another.
+        """
+
+        # Update first user's Pokémon.
+        self.db.update_one(
+            {'_id': your_pokemon.owner.id},
+            {'$inc': {
+                f'pokemon.{your_pokemon.name}.normal': -int(not your_pokemon.is_shiny),
+                f'pokemon.{your_pokemon.name}.shiny': -int(your_pokemon.is_shiny),
+                f'pokemon.{their_pokemon.name}.normal': +int(not their_pokemon.is_shiny),
+                f'pokemon.{their_pokemon.name}.shiny': +int(their_pokemon.is_shiny),
+            }}
+        )
+
+        # Update second user's Pokémon.
+        self.db.update_one(
+            {'_id': their_pokemon.owner.id},
+            {'$inc': {
+                f'pokemon.{your_pokemon.name}.normal': +int(not your_pokemon.is_shiny),
+                f'pokemon.{your_pokemon.name}.shiny': +int(your_pokemon.is_shiny),
+                f'pokemon.{their_pokemon.name}.normal': -int(not their_pokemon.is_shiny),
+                f'pokemon.{their_pokemon.name}.shiny': -int(their_pokemon.is_shiny),
+            }}
+        )
+
+        # Update first user's favorite if necessary.
+        first_user = self.db.find_one({'_id': your_pokemon.owner.id})
+
+        if first_user['favorite']['name'] == your_pokemon.name:
+            if first_user['pokemon'][your_pokemon.name]['shiny' if your_pokemon.is_shiny else 'normal'] == 0:
+                self.set_favorite(your_pokemon.owner, their_pokemon.name, their_pokemon.is_shiny)
+
+        # Update second user's favorite if necessary.
+        second_user = self.db.find_one({'_id': their_pokemon.owner.id})
+
+        if second_user['favorite']['name'] == their_pokemon.name:
+            if second_user['pokemon'][their_pokemon.name]['shiny' if their_pokemon.is_shiny else 'normal'] == 0:
+                self.set_favorite(their_pokemon.owner, your_pokemon.name, your_pokemon.is_shiny)
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
