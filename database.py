@@ -205,15 +205,17 @@ class PokemonDatabase:
 
         # Update first user's favorite if necessary.
         first_user = self.db.find_one({'_id': your_pokemon.owner.id})
+        first_user_favorite = self.get_favorite(your_pokemon.owner)
 
-        if first_user['favorite']['name'] == your_pokemon.name:
+        if first_user_favorite.get('name') == your_pokemon.name:
             if first_user['pokemon'][your_pokemon.name]['shiny' if your_pokemon.is_shiny else 'normal'] == 0:
                 self.set_favorite(your_pokemon.owner, their_pokemon.name, their_pokemon.is_shiny)
 
         # Update second user's favorite if necessary.
         second_user = self.db.find_one({'_id': their_pokemon.owner.id})
+        second_user_favorite = self.get_favorite(their_pokemon.owner)
 
-        if second_user['favorite']['name'] == their_pokemon.name:
+        if second_user_favorite.get('name') == their_pokemon.name:
             if second_user['pokemon'][their_pokemon.name]['shiny' if their_pokemon.is_shiny else 'normal'] == 0:
                 self.set_favorite(their_pokemon.owner, your_pokemon.name, your_pokemon.is_shiny)
 
