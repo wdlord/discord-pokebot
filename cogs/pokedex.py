@@ -37,7 +37,7 @@ class PokedexPage(discord.ui.View):
         if not user_pokemon:
             return pokemon_list
 
-        for name in sorted(user_pokemon.keys(), key=constants.POKEDEX_KEY.get):
+        for name in sorted(user_pokemon.keys(), key=lambda x: constants.POKEDEX_KEY.get(x, 9999)):
 
             # Show normal versions of this Pokémon (if any exist).
 
