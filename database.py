@@ -131,11 +131,22 @@ class PokemonDatabase:
 
             # If the user has not set a favorite, we will set their favorite as their first Pokémon.
             if type(error) is KeyError:
-                first_pokemon = list(user_obj['pokemon'].keys())[0]
+
+                first_pokemon_name = None
+
+                # Finds the first owned Pokémon.
+                for name in list(user_obj['pokemon'].keys()):
+                    if user_obj['pokemon'][name]['normal'] or user_obj['pokemon'][name]['shiny']:
+                        first_pokemon_name = name
+                        break
+
+                if not first_pokemon_name:
+                    print('User does not own any Pokemon.')
+                    return
 
                 favorite = {
-                    'name': first_pokemon,
-                    'is_shiny': (user_obj['pokemon'][first_pokemon]['normal'] == 0)
+                    'name': first_pokemon_name,
+                    'is_shiny': (user_obj['pokemon'][first_pokemon_name]['normal'] == 0)
                 }
 
                 self.db.update_one({'_id': user.id}, {'$set': {'favorite': favorite}}, upsert=True)
