@@ -1,6 +1,7 @@
 # Code by https://github.com/wdlord
 
 import datetime
+import json
 
 """This module defines project-level constants."""
 
@@ -22,6 +23,10 @@ def get_sprite(pokemon: dict, is_shiny: bool) -> str:
     )
 
     return sprite_url
+
+
+with open('pokedex_key.json', 'r') as f:
+    POKEDEX_KEY = json.load(f)
 
 
 ENCOUNTER_CHANCE = 0.01
