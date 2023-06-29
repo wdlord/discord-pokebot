@@ -2,10 +2,11 @@
 
 import discord
 from discord.ext import commands
-from database import POKEMON_DB, TradeablePokemon
+from database import POKEMON_DB
 from dataclasses import dataclass
 from typing import Optional, List
-from pokeapi import pokemon_names
+from pokeapi import pokemon_names, get_pokemon
+import constants
 
 
 @dataclass
@@ -109,7 +110,11 @@ class SetPartyModal(discord.ui.Modal, title="Set Your Battle Party!"):
         Continues with setting the party.
         """
 
-        await interaction.response.send_message("Lets gooooo!", ephemeral=True)
+        party = [{'name': party_member.name, 'is_shiny': party_member.is_shiny} for party_member in party_state]
+
+        POKEMON_DB.set_battle_party(interaction.user, party)
+
+        await interaction.response.send_message("Your battle party has been updated!", ephemeral=True)
 
     async def failed_run(self, interaction: discord.Interaction, party_state: List[PartyMember]):
         """
@@ -128,39 +133,114 @@ class SetPartyModal(discord.ui.Modal, title="Set Your Battle Party!"):
         await interaction.response.send_message(message, ephemeral=True)
 
 
-class ConfirmationView(discord.ui.View):
+class BattlePartyView(discord.ui.View):
     """
-    Lets the target user accept or decline the trade request.
+    Views the battle party for a given user.
     """
 
-    def __init__(self, your_pokemon: TradeablePokemon, their_pokemon: TradeablePokemon):
+    def __init__(self, user: discord.User):
         super().__init__()
-        self.your_pokemon = your_pokemon
-        self.their_pokemon = their_pokemon
+        self.user = user
+        self.battle_party = POKEMON_DB.get_battle_party(user)
+        self.member_index = 0
+        self.message = None
 
-    @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
-    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+    def empty_embed(self):
         """
-        Accepts the trade request.
+        This embed only appears when a user does not have a battle party set.
         """
 
-        if interaction.user != self.their_pokemon.owner:
+        desc = "Battle party is empty."
+        embed = discord.Embed(description=desc, color=0x000000, title=f"{self.user.name}'s Pokédex")
+        embed.set_footer(text="Party Member: 0 of 0")
+
+        return embed
+
+    def make_embed(self):
+        """
+        Creates the embed that represents a Pokémon in the battle party.
+        """
+
+        current_member = self.battle_party[self.member_index]
+
+        pokemon = get_pokemon(current_member['name'])
+
+        # Get the color corresponding to the first type of this Pokémon to use as the embed color.
+        first_type_name = pokemon['types'][0]['type']['name']
+        type_color = constants.TYPE_TO_COLOR[first_type_name]
+
+        embed = discord.Embed(description='', color=type_color, title=f"{self.user.name}'s Battle Party")
+
+        # Set the embed image to be shown.
+        member_sprite = constants.get_sprite(pokemon, current_member['is_shiny'])
+        embed.set_image(url=member_sprite)
+
+        # Add the stats to the display.
+        stats = (
+            f"Pokédex #: *{pokemon['id']:03d}*\n"
+            f"Height: *{pokemon['height']} decimetres*\n"
+            f"Weight: *{pokemon['weight']} hectograms*\n"
+        )
+        embed.add_field(name=current_member['name'].title(), value=stats)
+
+        # Show page status.
+        embed.set_footer(text=f"Party Member: {self.member_index + 1} of {len(self.battle_party)}")
+
+        return embed
+
+    async def send(self, interaction: discord.Interaction):
+        """
+        Sends original message that shows the view. We do it within the class to save the message locally.
+
+        :param interaction: The interaction of the command used.
+        :return:
+        """
+
+        embed = self.make_embed() if self.battle_party else self.empty_embed()
+        await interaction.response.send_message(embed=embed, view=self)
+        self.message = await interaction.original_response()
+
+    @discord.ui.button(label='◀', style=discord.ButtonStyle.grey)
+    async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """
+        Show the previous page when clicked.
+        """
+
+        # Special case for users that are not in the database.
+        if not self.battle_party:
+            button.disabled = True
+            await interaction.response.defer()
             return
 
-        POKEMON_DB.trade(self.your_pokemon, self.their_pokemon)
+        # Loop around to the beginning if necessary.
+        self.member_index = len(self.battle_party) - 1 if self.member_index == 0 else self.member_index - 1
 
-        await interaction.response.send_message(f"Trade completed!")
-        self.stop()
+        # Remake the embed with the next group of Pokémon, and update the message.
+        await self.message.edit(embed=self.make_embed(), view=self)
 
-    @discord.ui.button(label='Decline', style=discord.ButtonStyle.grey)
-    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
+
+    @discord.ui.button(label='▶', style=discord.ButtonStyle.grey)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
-        Declines the trade request.
+        Show the next page when clicked.
         """
 
-        if interaction.user == self.their_pokemon.owner:
-            await interaction.response.send_message(f"{self.their_pokemon.owner} has declined the request.")
-            self.stop()
+        # Special case for users that are not in the database.
+        if not self.battle_party:
+            button.disabled = True
+            await interaction.response.defer()
+            return
+
+        # Loop around to the beginning if necessary.
+        self.member_index = 0 if self.member_index + 1 == len(self.battle_party) else self.member_index + 1
+
+        # Remake the embed with the next group of Pokémon, and update the message.
+        await self.message.edit(embed=self.make_embed(), view=self)
+
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
 
 
 class BattleParty(commands.Cog):
@@ -208,7 +288,9 @@ class BattleParty(commands.Cog):
         """
         View your Pokémon battle party.
         """
-        pass
+
+        view = BattlePartyView(user or interaction.user)
+        await view.send(interaction)
 
 
 async def setup(bot):

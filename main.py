@@ -18,7 +18,7 @@ class Bot(commands.Bot):
         intents = discord.Intents.default()
 
         # This is used to improve the workflow for slash command syncing during development.
-        self.testing = True
+        self.testing = False
 
         super().__init__(command_prefix=['$'], intents=intents)
 
@@ -67,7 +67,7 @@ async def main():
             await bot.load_extension(f'cogs.{filename[:-3]}')
 
     print('------')
-    await bot.start(creds.DEV_TOKEN)
+    await bot.start(creds.TOKEN)
 
 
 # Start the bot loop.
