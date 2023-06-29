@@ -6,6 +6,7 @@ import discord
 from creds import MONGO_USER, MONGO_PASSWORD
 import constants
 from dataclasses import dataclass
+from typing import Optional, List
 
 
 @dataclass
@@ -229,6 +230,28 @@ class PokemonDatabase:
         if second_user_favorite.get('name') == their_pokemon.name:
             if second_user['pokemon'][their_pokemon.name]['shiny' if their_pokemon.is_shiny else 'normal'] == 0:
                 self.set_favorite(their_pokemon.owner, your_pokemon.name, your_pokemon.is_shiny)
+
+    def get_battle_party(self, user: discord.User) -> Optional[List]:
+        """
+        Gets the user's current battle party.
+        """
+
+        user_obj = self.db.find_one({'_id': user.id})
+
+        if not user_obj:
+            return None
+
+        if not user_obj.get('battle_party'):
+            return []
+
+        return user_obj['battle_party']
+
+    def set_battle_party(self, user: discord.User, party: List):
+        """
+        Sets the user's current battle party.
+        """
+
+        self.db.update_one({'_id': user.id}, {'$set': {'battle_party': party}})
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
