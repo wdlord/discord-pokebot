@@ -6,6 +6,7 @@ import discord
 from creds import MONGO_USER, MONGO_PASSWORD
 import constants
 from dataclasses import dataclass
+from typing import Optional, List
 
 
 @dataclass
@@ -187,6 +188,51 @@ class PokemonDatabase:
                 }}
         )
 
+        pokemonA = TradeablePokemon(old_pokemon, is_shiny, user)
+        pokemonB = TradeablePokemon(new_pokemon, is_shiny, user)
+        self.trade_update_favorite(pokemonA, pokemonB)
+        self.trade_update_battle_party(pokemonA, pokemonB)
+
+    def trade_update_favorite(self, pokemonA: TradeablePokemon, pokemonB: TradeablePokemon):
+        """
+        Helper function to update favorites if necessary.
+        :param pokemonA: Updates the favorite for this Pokémon's owner if necessary.
+        :param pokemonB: Updates the favorite to this Pokémon in the above case.
+        """
+
+        user = self.db.find_one({'_id': pokemonA.owner.id})
+        favorite = self.get_favorite(pokemonA.owner)
+
+        if favorite.get('name') == pokemonA.name:
+            if user['pokemon'][pokemonA.name]['shiny' if pokemonA.is_shiny else 'normal'] == 0:
+                self.set_favorite(pokemonA.owner, pokemonB.name, pokemonB.is_shiny)
+
+    def trade_update_battle_party(self, pokemonA: TradeablePokemon, pokemonB: TradeablePokemon):
+        """
+        Helper function to update battle parties if necessary.
+        :param pokemonA: Updates the party for this Pokémon's owner if necessary.
+        :param pokemonB: Updates the party to this Pokémon in the above case.
+        """
+
+        user = self.db.find_one({'_id': pokemonA.owner.id})
+        party = self.get_battle_party(pokemonA.owner)
+
+        updated = False
+
+        # Replaces traded Pokémon in current copy of the dict if necessary.
+        for i, member in enumerate(party):
+            if member['name'] == pokemonA.name:
+                if user['pokemon'][pokemonA.name]['shiny' if pokemonA.is_shiny else 'normal'] == 0:
+                    party[i] = {
+                        'name': pokemonB.name,
+                        'is_shiny': pokemonB.is_shiny
+                    }
+                    updated = True
+
+        # Updates the battle party using that copy.
+        if updated:
+            self.set_battle_party(pokemonA.owner, party)
+
     def trade(self, your_pokemon: TradeablePokemon, their_pokemon: TradeablePokemon):
         """
         Trades one Pokémon for another.
@@ -214,21 +260,35 @@ class PokemonDatabase:
             }}
         )
 
-        # Update first user's favorite if necessary.
-        first_user = self.db.find_one({'_id': your_pokemon.owner.id})
-        first_user_favorite = self.get_favorite(your_pokemon.owner)
+        # Update users' favorites if necessary.
+        self.trade_update_favorite(your_pokemon, their_pokemon)
+        self.trade_update_favorite(their_pokemon, your_pokemon)
 
-        if first_user_favorite.get('name') == your_pokemon.name:
-            if first_user['pokemon'][your_pokemon.name]['shiny' if your_pokemon.is_shiny else 'normal'] == 0:
-                self.set_favorite(your_pokemon.owner, their_pokemon.name, their_pokemon.is_shiny)
+        # Update users' battle parties if necessary.
+        self.trade_update_battle_party(your_pokemon, their_pokemon)
+        self.trade_update_battle_party(their_pokemon, your_pokemon)
 
-        # Update second user's favorite if necessary.
-        second_user = self.db.find_one({'_id': their_pokemon.owner.id})
-        second_user_favorite = self.get_favorite(their_pokemon.owner)
+    def get_battle_party(self, user: discord.User) -> Optional[List]:
+        """
+        Gets the user's current battle party.
+        """
 
-        if second_user_favorite.get('name') == their_pokemon.name:
-            if second_user['pokemon'][their_pokemon.name]['shiny' if their_pokemon.is_shiny else 'normal'] == 0:
-                self.set_favorite(their_pokemon.owner, your_pokemon.name, your_pokemon.is_shiny)
+        user_obj = self.db.find_one({'_id': user.id})
+
+        if not user_obj:
+            return None
+
+        if not user_obj.get('battle_party'):
+            return []
+
+        return user_obj['battle_party']
+
+    def set_battle_party(self, user: discord.User, party: List):
+        """
+        Sets the user's current battle party.
+        """
+
+        self.db.update_one({'_id': user.id}, {'$set': {'battle_party': party}})
 
 
 uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@pokeroll.5g5ryxr.mongodb.net/?retryWrites=true&w=majority"
