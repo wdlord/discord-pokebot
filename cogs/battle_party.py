@@ -75,7 +75,7 @@ class SetPartyModal(discord.ui.Modal, title="Set Your Battle Party!"):
                 continue
 
             # Marks entries that are Pokémon that do not exist.
-            if name.title() not in pokemon_names:
+            if name not in pokemon_names:
                 party_member = PartyMember(name, is_shiny, False, "Pokemon does not exist.")
                 party_state.append(party_member)
                 passing = False
