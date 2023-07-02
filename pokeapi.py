@@ -23,7 +23,7 @@ def get_pokemon(pokemon_name: Optional[str] = None) -> Optional[dict]:
     # Randomly select a Pokémon if no name is supplied.
     if not pokemon_name:
         pokemon_name = pokemon_names[random.randrange(0, len(pokemon_names))]
-        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name.lower()}/")
+        response = requests.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}/")
 
         # Get a new random Pokémon if the one we used could not be found.
         if response.status_code == 404:
