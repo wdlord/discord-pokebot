@@ -63,9 +63,15 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, u
     :param remaining_rolls: How many more rolls the user has available.
     """
 
+    # This may prevent the interaction breaking, we'll see.
+    interaction.response.defer()
+
     # Create a new random Pokémon.
     pokemon = get_pokemon()
     is_shiny = random.random() < constants.SHINY_CHANCE
+
+    # Logging to track a bug.
+    print(f'--- {interaction.user} rolled {pokemon["name"]} ---')
 
     # Add the Pokémon to the user's Pokédex.
     POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], is_shiny=is_shiny)
