@@ -124,10 +124,12 @@ class ConfirmationView(discord.ui.View):
         if interaction.user != self.their_pokemon.owner:
             return
 
+        self.stop()
+        await interaction.response.defer()
+
         POKEMON_DB.trade(self.your_pokemon, self.their_pokemon)
 
-        await interaction.response.send_message(f"Trade completed!")
-        self.stop()
+        await interaction.followup.send(f"Trade completed!")
 
     @discord.ui.button(label='Decline', style=discord.ButtonStyle.grey)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
