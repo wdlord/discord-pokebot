@@ -28,6 +28,9 @@ class PokemonRollCard(discord.ui.View):
         if interaction.user != self.user:
             return
 
+        # This may prevent the interaction breaking, we'll see.
+        await interaction.response.defer()
+
         await roll_pokemon(interaction, self.remaining_rolls, self.user)
         self.stop()
 
@@ -63,15 +66,9 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, u
     :param remaining_rolls: How many more rolls the user has available.
     """
 
-    # This may prevent the interaction breaking, we'll see.
-    interaction.response.defer()
-
     # Create a new random Pokémon.
     pokemon = get_pokemon()
     is_shiny = random.random() < constants.SHINY_CHANCE
-
-    # Logging to track a bug.
-    print(f'--- {interaction.user} rolled {pokemon["name"]} ---')
 
     # Add the Pokémon to the user's Pokédex.
     POKEMON_DB.add_pokemon(interaction.user, pokemon['name'], is_shiny=is_shiny)
@@ -83,11 +80,11 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, u
     # If the user still has more cards to open, we recursively create another card WITH a 'Next' button.
     if remaining_rolls > 0:
         view = PokemonRollCard(remaining_rolls, user)
-        await interaction.response.send_message(embed=make_embed(pokemon, is_shiny), view=view)
+        await interaction.followup.send(embed=make_embed(pokemon, is_shiny), view=view)
 
     # Else we can send the card without a 'Next' button.
     else:
-        await interaction.response.send_message(embed=make_embed(pokemon, is_shiny))
+        await interaction.followup.send(embed=make_embed(pokemon, is_shiny))
 
 
 def get_reset_time() -> str:
@@ -155,6 +152,9 @@ class RollPokemon(commands.Cog):
         Rolls one Pokémon at a time, click the next button to continue.
         """
 
+        # This may prevent the interaction breaking, we'll see.
+        await interaction.response.defer()
+
         remaining_rolls = POKEMON_DB.get_remaining_rolls(interaction.user)
 
         if remaining_rolls > 0:
@@ -162,7 +162,7 @@ class RollPokemon(commands.Cog):
 
         else:
             message = f"You've used all your rolls. Rolls reset in **{get_reset_time()}**."
-            await interaction.response.send_message(message, ephemeral=True)
+            await interaction.followup.send(message, ephemeral=True)    # ephemeral does not seem to work here.
 
 
 async def setup(bot):
