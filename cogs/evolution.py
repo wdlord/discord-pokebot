@@ -99,13 +99,11 @@ class EvolutionDropdown(discord.ui.View):
         async def callback(interaction: discord.Interaction):
             """Defines what happens when a select option is chosen."""
 
+            await interaction.response.defer(ephemeral=True)
+
             if not self.used:
                 await evolve_pokemon(interaction, self.pokemon_name, select.values[0], self.is_shiny)
                 self.used = True
-
-            # For some reason setting select.disabled = True does not work, so I'm doing this instead.
-            else:
-                await interaction.response.defer()
 
         # This is the select menu that will appear.
         select = discord.ui.Select(
@@ -134,6 +132,7 @@ class NormalOrShiny(discord.ui.View):
         Choose to evolve the normal variant of the Pokémon.
         """
 
+        await interaction.response.defer(ephemeral=True)
         await continue_evolve_dialog(interaction, self.pokemon_name, False)
         self.stop()
 
@@ -143,6 +142,7 @@ class NormalOrShiny(discord.ui.View):
         Choose to evolve the shiny variant of the Pokémon.
         """
 
+        await interaction.response.defer(ephemeral=True)
         await continue_evolve_dialog(interaction, self.pokemon_name, True)
         self.stop()
 
