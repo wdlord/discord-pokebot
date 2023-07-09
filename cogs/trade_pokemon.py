@@ -62,6 +62,8 @@ class SendRequestView(discord.ui.View):
         Sends the trade request.
         """
 
+        await interaction.response.defer(ephemeral=True)
+
         selects = [child for child in self.children if isinstance(child, discord.ui.Select)]
 
         # The user must have made a selection for both options.
@@ -71,14 +73,14 @@ class SendRequestView(discord.ui.View):
         # Make sure AGAIN that caller has specified Pokémon.
         caller_pokemon_data = POKEMON_DB.get_pokemon_data(self.calling_user, self.your_pokemon)
         if not caller_pokemon_data['normal'] and not caller_pokemon_data['shiny']:
-            await interaction.response.send_message("You do not have any of that Pokémon.", ephemeral=True)
+            await interaction.followup.send("You do not have any of that Pokémon.")
             self.stop()
             return
 
         # Make sure AGAIN that target has specified Pokémon.
         target_pokemon_data = POKEMON_DB.get_pokemon_data(self.target_user, self.their_pokemon)
         if not target_pokemon_data['normal'] and not target_pokemon_data['shiny']:
-            await interaction.response.send_message(f"{self.target_user.name} does not have any of that Pokémon.", ephemeral=True)
+            await interaction.followup.send(f"{self.target_user.name} does not have any of that Pokémon.")
             self.stop()
             return
 
@@ -92,7 +94,8 @@ class SendRequestView(discord.ui.View):
             f"for {their_pokemon.owner.name}'s {'✨shiny✨ ' if their_pokemon.is_shiny else ''}**{their_pokemon.name.title()}**."
         )
         view = ConfirmationView(your_pokemon, their_pokemon)
-        await interaction.response.send_message(message, view=view)
+        text_channel = interaction.guild.get_channel(interaction.channel_id)
+        await text_channel.send(message, view=view)
         self.stop()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
@@ -172,29 +175,31 @@ class Trade(commands.Cog):
         Trade one of your Pokémon for someone else's.
         """
 
+        await interaction.response.defer(ephemeral=True)
+
         your_pokemon = your_pokemon.lower().strip()
         their_pokemon = their_pokemon.lower().strip()
 
         # User cannot trade with themselves.
         if interaction.user.id == user.id:
-            await interaction.response.send_message("You cannot trade with yourself.", ephemeral=True)
+            await interaction.followup.send("You cannot trade with yourself.")
             return
 
         # Make sure caller has specified Pokémon.
         caller_pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, your_pokemon)
         if not caller_pokemon_data['normal'] and not caller_pokemon_data['shiny']:
-            await interaction.response.send_message("You do not have any of that Pokémon.", ephemeral=True)
+            await interaction.followup.send("You do not have any of that Pokémon.")
             return
 
         # Make sure target has specified Pokémon.
         target_pokemon_data = POKEMON_DB.get_pokemon_data(user, their_pokemon)
         if not target_pokemon_data['normal'] and not target_pokemon_data['shiny']:
-            await interaction.response.send_message(f"{user.name} does not have any of that Pokémon.", ephemeral=True)
+            await interaction.followup.send(f"{user.name} does not have any of that Pokémon.")
             return
 
         message = "Select which pokemon to trade."
         view = SendRequestView(interaction.user, user, your_pokemon, their_pokemon)
-        await interaction.response.send_message(message, view=view, ephemeral=True)
+        await interaction.followup.send(message, view=view)
 
 
 async def setup(bot):
