@@ -67,7 +67,7 @@ async def main():
             await bot.load_extension(f'cogs.{filename[:-3]}')
 
     print('------')
-    await bot.start(creds.TOKEN)
+    await bot.start(creds.DEV_TOKEN)
 
 
 # Start the bot loop.
