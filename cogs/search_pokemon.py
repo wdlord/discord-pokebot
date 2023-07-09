@@ -53,7 +53,7 @@ class PokemonSearchCard(discord.ui.View):
         :param interaction: An active interaction that we can use to send a response.
         """
 
-        await interaction.response.send_message(embed=self.make_embed(), view=self)
+        await interaction.followup.send(embed=self.make_embed(), view=self)
         self.message = await interaction.original_response()
 
     @discord.ui.button(label='View Shiny', style=discord.ButtonStyle.green)
@@ -109,6 +109,7 @@ class SearchPokemon(commands.Cog):
             await interaction.response.send_message("We couldn't find that pokemon.", ephemeral=True)
 
         else:
+            await interaction.response.defer()
             pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, pokemon['name'])
             search_card = PokemonSearchCard(pokemon, pokemon_data)
             await search_card.send_card(interaction)

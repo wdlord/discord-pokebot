@@ -166,7 +166,7 @@ async def evolve_pokemon(interaction: discord.Interaction, old: str, new: str, i
     if favorite['name'] == old and favorite['is_shiny'] == is_shiny:
         POKEMON_DB.set_favorite(interaction.user, new, is_shiny)
 
-    await interaction.response.send_message(f"You evolved **{old.title()}** into **{new.title()}**!")
+    await interaction.followup.send(f"You evolved **{old.title()}** into **{new.title()}**!")
 
 
 async def continue_evolve_dialog(interaction: discord.Interaction, pokemon_name, is_shiny):
@@ -184,7 +184,7 @@ async def continue_evolve_dialog(interaction: discord.Interaction, pokemon_name,
     evolutions = get_evolutions(get_pokemon(pokemon_name))
 
     if not evolutions:
-        await interaction.response.send_message("This Pokémon cannot evolve further.", ephemeral=True)
+        await interaction.followup.send("This Pokémon cannot evolve further.")
 
     elif len(evolutions) == 1:
         await evolve_pokemon(interaction, pokemon_name, evolutions[0].name, is_shiny)
@@ -193,7 +193,7 @@ async def continue_evolve_dialog(interaction: discord.Interaction, pokemon_name,
     else:
         view = EvolutionDropdown(pokemon_name, is_shiny, evolutions)
         message = "Choose the evolution: Careful! Once you select an option your choice is final!"
-        await interaction.response.send_message(message, view=view, ephemeral=True)
+        await interaction.followup.send(message, view=view)
 
 
 class Evolution(commands.Cog):
@@ -249,21 +249,23 @@ class Evolution(commands.Cog):
         Consumes a Bluk Berry to evolve one of your Pokémon.
         """
 
+        await interaction.response.defer(ephemeral=True)
+
         pokemon_name = pokemon_name.strip().lower()
 
         # The user needs at least one Bluk Berry.
         if not POKEMON_DB.num_berries(interaction.user):
-            await interaction.response.send_message("You don't have enough Bluk Berries.", ephemeral=True)
+            await interaction.followup.send("You don't have enough Bluk Berries.")
             return
 
         pokemon = POKEMON_DB.get_pokemon_data(interaction.user, pokemon_name)
 
         if not pokemon['normal'] and not pokemon['shiny']:
-            await interaction.response.send_message("You don't have that Pokémon.", ephemeral=True)
+            await interaction.followup.send("You don't have that Pokémon.")
 
         elif pokemon['normal'] and pokemon['shiny']:
             prompt = f"Would you like to evolve the normal or shiny **{pokemon_name.title()}**?"
-            await interaction.response.send_message(prompt, view=NormalOrShiny(pokemon_name), ephemeral=True)
+            await interaction.followup.send(prompt, view=NormalOrShiny(pokemon_name))
 
         # If the user only has a normal OR shiny version, we don't need to ask them which to set.
         elif pokemon['normal'] or pokemon['shiny']:
