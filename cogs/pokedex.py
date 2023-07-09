@@ -126,7 +126,7 @@ class PokedexPage(discord.ui.View):
         """
 
         embed = self.make_embed() if self.pokemon_list else self.empty_embed()
-        await interaction.response.send_message(embed=embed, view=self)
+        await interaction.followup.send(embed=embed, view=self)
         self.message = await interaction.original_response()
 
     @discord.ui.button(label='◀', style=discord.ButtonStyle.grey)
@@ -135,10 +135,12 @@ class PokedexPage(discord.ui.View):
         Show the previous page when clicked.
         """
 
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
+
         # Special case for users that are not in the database.
         if not self.pokemon_list:
             button.disabled = True
-            await interaction.response.defer()
             return
 
         # Loop around to the end if necessary.
@@ -147,19 +149,18 @@ class PokedexPage(discord.ui.View):
         # Remake the embed with the next group of Pokémon, and update the message.
         await self.message.edit(embed=self.make_embed(), view=self)
 
-        # We must acknowledge the interaction in some way.
-        await interaction.response.defer()
-
     @discord.ui.button(label='▶', style=discord.ButtonStyle.grey)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Show the next page when clicked.
         """
 
+        # We must acknowledge the interaction in some way.
+        await interaction.response.defer()
+
         # Special case for users that are not in the database.
         if not self.pokemon_list:
             button.disabled = True
-            await interaction.response.defer()
             return
 
         # Loop around to the beginning if necessary.
@@ -167,9 +168,6 @@ class PokedexPage(discord.ui.View):
 
         # Remake the embed with the next group of Pokémon, and update the message.
         await self.message.edit(embed=self.make_embed(), view=self)
-
-        # We must acknowledge the interaction in some way.
-        await interaction.response.defer()
 
 
 class NormalOrShiny(discord.ui.View):
@@ -187,8 +185,9 @@ class NormalOrShiny(discord.ui.View):
         Set the normal variant of the Pokémon as the favorite.
         """
 
+        await interaction.response.defer(ephemeral=True)
         POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, False)
-        await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+        await interaction.followup.send(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.")
         self.stop()
 
     @discord.ui.button(label='Shiny', style=discord.ButtonStyle.grey)
@@ -197,8 +196,9 @@ class NormalOrShiny(discord.ui.View):
         Set the shiny variant of the Pokémon as the favorite.
         """
 
+        await interaction.response.defer(ephemeral=True)
         POKEMON_DB.set_favorite(interaction.user, self.pokemon_name, True)
-        await interaction.response.send_message(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.", ephemeral=True)
+        await interaction.followup.send(f"{self.pokemon_name.title()} has been set as your favorite Pokémon.")
         self.stop()
 
 
@@ -232,6 +232,8 @@ class Pokedex(commands.Cog):
         View your (or another user's) captured Pokémon.
         """
 
+        await interaction.response.defer()
+
         # Uses 'user' if supplied, otherwise uses the user who called the command.
         pokedex_view = PokedexPage(user or interaction.user)
         await pokedex_view.send(interaction)
@@ -242,21 +244,23 @@ class Pokedex(commands.Cog):
         Set the Pokémon that appears in your Pokédex thumbnail.
         """
 
+        await interaction.response.defer(ephemeral=True)
+
         pokemon_name = pokemon_name.lower().strip()
 
         pokemon_data = POKEMON_DB.get_pokemon_data(interaction.user, pokemon_name)
 
         if not pokemon_data['normal'] and not pokemon_data['shiny']:
-            await interaction.response.send_message("You do not own any of that Pokémon.", ephemeral=True)
+            await interaction.followup.send("You do not own any of that Pokémon.")
 
         elif pokemon_data['normal'] and pokemon_data['shiny']:
             prompt = f"Would you like to set the normal or shiny **{pokemon_name.title()}** as your favorite?"
-            await interaction.response.send_message(prompt, view=NormalOrShiny(pokemon_name), ephemeral=True)
+            await interaction.followup.send(prompt, view=NormalOrShiny(pokemon_name))
 
         # if the user only owns a normal OR shiny variant, we don't need to ask them which to set.
         elif pokemon_data['normal'] or pokemon_data['shiny']:
             POKEMON_DB.set_favorite(interaction.user, pokemon_name, pokemon_data['shiny'] > 0)
-            await interaction.response.send_message(f"**{pokemon_name.title()}** has been set as your favorite Pokémon.", ephemeral=True)
+            await interaction.followup.send(f"**{pokemon_name.title()}** has been set as your favorite Pokémon.")
 
 
 async def setup(bot):

@@ -197,7 +197,7 @@ class BattlePartyView(discord.ui.View):
         """
 
         embed = self.make_embed() if self.battle_party else self.empty_embed()
-        await interaction.response.send_message(embed=embed, view=self)
+        await interaction.followup.send(embed=embed, view=self)
         self.message = await interaction.original_response()
 
     @discord.ui.button(label='◀', style=discord.ButtonStyle.grey)
@@ -289,6 +289,7 @@ class BattleParty(commands.Cog):
         View your Pokémon battle party.
         """
 
+        await interaction.response.defer()
         view = BattlePartyView(user or interaction.user)
         await view.send(interaction)
 
