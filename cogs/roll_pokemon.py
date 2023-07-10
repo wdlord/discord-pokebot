@@ -14,13 +14,12 @@ class PokemonRollCard(discord.ui.View):
     Represents a Pokémon from the /roll command.
     """
 
-    def __init__(self, remaining_rolls, user):
+    def __init__(self, user):
         super().__init__()
-        self.remaining_rolls = remaining_rolls
         self.user = user
 
     @discord.ui.button(label='Next', style=discord.ButtonStyle.green)
-    async def card_view(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """
         Defines the interaction when the Next button is clicked when rolling Pokémon.
         """
@@ -28,11 +27,10 @@ class PokemonRollCard(discord.ui.View):
         if interaction.user != self.user:
             return
 
-        # This may prevent the interaction breaking, we'll see.
         await interaction.response.defer()
-
-        await roll_pokemon(interaction, self.remaining_rolls, self.user)
         self.stop()
+
+        await roll_pokemon(interaction)
 
 
 def make_embed(pokemon: dict, is_shiny: bool) -> discord.Embed:
@@ -58,12 +56,11 @@ def make_embed(pokemon: dict, is_shiny: bool) -> discord.Embed:
     return embed
 
 
-async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, user: discord.User):
+async def roll_pokemon(interaction: discord.Interaction):
     """
     Recursively generates new cards until the user is out of rolls.
 
     :param interaction: Either the interaction from the command, or from the 'Next' button.
-    :param remaining_rolls: How many more rolls the user has available.
     """
 
     # Create a new random Pokémon.
@@ -75,11 +72,11 @@ async def roll_pokemon(interaction: discord.Interaction, remaining_rolls: int, u
 
     # Adjust the user's remaining rolls.
     POKEMON_DB.use_roll(interaction.user)
-    remaining_rolls -= 1    # this avoids unnecessary database access.
+    remaining_rolls = POKEMON_DB.get_remaining_rolls(interaction.user)
 
     # If the user still has more cards to open, we recursively create another card WITH a 'Next' button.
     if remaining_rolls > 0:
-        view = PokemonRollCard(remaining_rolls, user)
+        view = PokemonRollCard(interaction.user)
         await interaction.followup.send(embed=make_embed(pokemon, is_shiny), view=view)
 
     # Else we can send the card without a 'Next' button.
@@ -158,7 +155,7 @@ class RollPokemon(commands.Cog):
         remaining_rolls = POKEMON_DB.get_remaining_rolls(interaction.user)
 
         if remaining_rolls > 0:
-            await roll_pokemon(interaction, remaining_rolls, interaction.user)
+            await roll_pokemon(interaction)
 
         else:
             message = f"You've used all your rolls. Rolls reset in **{get_reset_time()}**."
